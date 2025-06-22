@@ -1,0 +1,341 @@
+/* ====== BMF SPECIFIC VARIABLES ====== */
+:root {
+  --n: 5;
+  --size: 46px;
+  --gap: 6px;
+  --tile-empty: #e9e9e9;
+  --bad: #ff6f6f;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --gap: 4px;
+  }
+}
+
+/* ====== GAME LAYOUT ====== */
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 20px;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.editWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--gap) * 2);
+  justify-content: center;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.boardGroup {
+  display: flex;
+  gap: calc(var(--gap) * 2);
+  align-items: flex-start;
+}
+
+.rowToggles {
+  display: grid;
+  grid-template-rows: repeat(var(--n), var(--size));
+  gap: var(--gap);
+  flex-shrink: 0;
+}
+
+.boardArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.colToggles {
+  display: grid;
+  grid-template-columns: repeat(var(--n), var(--size));
+  gap: var(--gap);
+  margin-top: var(--gap);
+}
+
+/* Card containers */
+.gridCard {
+  padding: var(--gap);
+  background: #fff;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Grids */
+.grid {
+  display: grid;
+  gap: var(--gap);
+}
+
+.grid.main {
+  grid-template-columns: repeat(var(--n), var(--size));
+  grid-template-rows: repeat(var(--n), var(--size));
+}
+
+.grid.mini {
+  grid-template-columns: repeat(var(--n), 14px);
+  grid-template-rows: repeat(var(--n), 14px);
+  gap: 2px;
+}
+
+/* Tiles */
+.tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s;
+  font-size: .9rem;
+  user-select: none;
+}
+
+.tile.zero {
+  background: var(--tile-empty);
+}
+
+.tile.want {
+  background: var(--accent-light);
+}
+
+.tile.good {
+  background: var(--accent);
+  color: #fff;
+}
+
+.tile.bad {
+  background: var(--bad);
+}
+
+/* Toggles */
+.toggle {
+  width: var(--size);
+  height: var(--size);
+  border-radius: 8px;
+  border: 2px solid var(--accent);
+  background: transparent;
+  cursor: pointer;
+  transition: .15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.toggle:hover {
+  border-color: var(--accent-dark);
+  background: rgba(144, 136, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle.on:hover {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
+/* Layer cards */
+#cards {
+  display: flex;
+  gap: 14px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  transition: all .15s;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(144, 136, 255, 0.3);
+}
+
+.card.active {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(108, 99, 255, 0.2);
+}
+
+.card.active:hover {
+  border-color: var(--accent-dark);
+  box-shadow: 0 4px 16px rgba(108, 99, 255, 0.3);
+}
+
+/* Buttons */
+.btnbar {
+  margin: 18px 0;
+}
+
+/* Mode toggle */
+.modeToggle {
+  display: flex;
+  gap: 6px;
+}
+
+.modeToggle input {
+  display: none;
+}
+
+.modeBtn {
+  padding: 6px 14px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  background: #fff;
+  font-weight: 600;
+  transition: .15s;
+}
+
+.modeBtn.checked {
+  background: var(--accent);
+  color: #fff;
+}
+
+.modeBtn:hover {
+  transform: scale(1.05);
+}
+
+/* Previews */
+.previewWrap {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--gap) * 2);
+}
+
+.previewWrap .label {
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* Code input specific */
+.codeInputWrap {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.codeInputWrap input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.codeButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.codeButtons button {
+  flex: 1;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .previewWrap {
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    order: -1;
+  }
+  
+  #app {
+    padding: 10px;
+  }
+  
+  .editWrap {
+    gap: var(--gap);
+  }
+}
+
+/* Tutorial overlay */
+.tutorialOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background: rgba(0, 0, 0, .15);
+}
+
+.tutorialHighlight {
+  pointer-events: none;
+  border: 3px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(144, 136, 255, .6), inset 0 0 10px rgba(144, 136, 255, .2);
+  animation: tutorialPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tutorialPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: .9;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.tutorialMessage {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2c2c2c;
+  color: #fff;
+  padding: 20px 30px;
+  border-radius: 12px;
+  max-width: 75%;
+  width: 360px;
+  text-align: center;
+  display: none;
+  pointer-events: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.tutorialText {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.tutorialContinue {
+  font-size: .95rem;
+  opacity: .7;
+  cursor: pointer;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 6px;
+  display: inline-block;
+  transition: .2s;
+}
+
+.tutorialContinue:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, .1);
+}

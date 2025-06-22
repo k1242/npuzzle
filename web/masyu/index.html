@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Masyu</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  
+  <!-- Open Graph meta tags -->
+  <meta property="og:title" content="Masyu">
+  <meta property="og:description" content="Draw a single loop with specific constraints">
+  <meta property="og:image" content="https://qdiag.xyz/masyu/preview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://qdiag.xyz/masyu/">
+  
+  <!-- Fonts and styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/masyu/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/masyu/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/masyu/favicon-16x16.png">
+  <link rel="manifest" href="https://qdiag.xyz/masyu/site.webmanifest">
+</head>
+<body>
+  <!-- Header (required) -->
+  <div class="header">
+    <div class="leftControls">
+      <!-- Menu button -->
+      <button id="menuBtn" class="hamburger"><span></span></button>
+      
+      <!-- Title with dropdown -->
+      <div class="title-wrapper">
+        <button class="title-button" id="titleBtn">
+          Masyu
+          <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="2" 
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </button>
+        <div class="games-dropdown" id="gamesDropdown">
+          <a href="/sudoku/" class="game-item">
+            <div class="game-name">Sudoku</div>
+            <div class="game-desc">Classic</div>
+          </a>
+          <!-- Game list, current game with active class -->
+          <a href="/masyu/" class="game-item active">
+            <span class="game-name">Masyu</span>
+            <span class="game-desc">Draw a loop</span>
+          </a>
+          <!-- Other games -->
+          <a href="/bmf/" class="game-item">
+            <span class="game-name">BMF</span>
+            <span class="game-desc">Find patterns</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="rightControls">
+      <!-- Additional elements -->
+      <a id="helpLink" href="#!">How&nbsp;to&nbsp;play</a>
+      <button id="newBtn" class="btn btn-primary">New Game</button>
+    </div>
+  </div>
+
+  <!-- Settings Panel (required) -->
+  <div id="panel">
+    <div class="setting">
+      <label>Board size</label>
+      <div class="stepper" data-target="n">
+        <button class="minus">-</button>
+        <span id="nVal">4</span>
+        <button class="plus">+</button>
+      </div>
+    </div>
+
+    <div class="setting">
+      <label>Circles density</label>
+      <div class="stepper" data-target="circles">
+        <button class="minus">-</button>
+        <span id="circlesVal">20%</span>
+        <button class="plus">+</button>
+      </div>
+    </div>
+
+    <div class="setting codeInputWrap">
+      <label for="codeInput">Puzzle code</label>
+      <input id="codeInput" placeholder="Puzzle code">
+      <div class="codeButtons">
+        <button id="copyCodeBtn" class="btn btn-secondary btn-small">Copy Code</button>
+        <button id="loadCodeBtn" class="btn btn-primary btn-small">Load Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Area -->
+  <div id="app">
+    <div class="gameWrap">
+      <div class="boardArea" id="boardArea">
+        <div id="gameGrid"></div>
+      </div>
+      <button id="clearBtn" class="btn btn-secondary">Clear</button>
+    </div>
+  </div>
+
+  <!-- Help modal -->
+  <div class="helpModal" id="helpModal">
+    <div class="helpBox">
+      <h2>How to Play Masyu</h2>
+      <p>Draw a single continuous loop by clicking edges between cells. The loop must pass through all circles following these rules:</p>
+      
+      <div class="examples" id="tutorialExamples">
+        <!-- Tutorial examples will be injected here -->
+      </div>
+      
+      <button id="closeHelp" class="btn btn-primary">Got it!</button>
+    </div>
+  </div>
+
+  <!-- Footer (optional) -->
+  <div class="footer">
+    <a href="https://t.me/qdiag" target="_blank">Telegram&nbsp;channel&nbsp;@qdiag</a>
+  </div>
+
+  <script src="common.js"></script>
+  <script src="loop-generator.js"></script>
+  <script src="encoder.js"></script>
+  <script src="renderer.js"></script>
+  <script src="storage.js"></script>
+  <script src="utils.js"></script>
+  <script src="script.js"></script>
+  <script src="tutorial.js"></script>
+</body>
+</html>

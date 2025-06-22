@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BMF</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  
+  <!-- Open Graph meta tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://qdiag.xyz/bmf/">
+  <meta property="og:title" content="BMF">
+  <meta property="og:description" content="Binary Matrix Factorization puzzle">
+  <meta property="og:image" content="https://qdiag.xyz/bmf/preview.png">
+  
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/masyu/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/masyu/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/masyu/favicon-16x16.png">
+  <link rel="manifest" href="https://qdiag.xyz/masyu/site.webmanifest">
+  
+  <!-- Fonts and styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="leftControls">
+      <button id="menuBtn" class="hamburger"><span></span></button>
+      <div class="title-wrapper">
+        <button class="title-button" id="titleBtn">
+          BMF
+          <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </button>
+        <div class="games-dropdown" id="gamesDropdown">
+          <a href="/sudoku/" class="game-item">
+            <div class="game-name">Sudoku</div>
+            <div class="game-desc">Classic</div>
+          </a>
+          <a href="/masyu/" class="game-item">
+            <span class="game-name">Masyu</span>
+            <span class="game-desc">Loop puzzle</span>
+          </a>
+          <a href="/bmf/" class="game-item active">
+            <span class="game-name">BMF</span>
+            <span class="game-desc">Binary cover</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="rightControls">
+      <a id="helpLink" href="#!">How&nbsp;to&nbsp;play</a>
+      <button id="newBtn" class="btn btn-primary">New Game</button>
+    </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div id="panel">
+    <div class="setting">
+      <label>Combine</label>
+      <div class="modeToggle">
+        <label class="modeBtn" id="orBtn"><input type="radio" hidden name="mode" value="bool">OR</label>
+        <label class="modeBtn checked" id="xorBtn"><input type="radio" hidden name="mode" value="mod" checked>XOR</label>
+      </div>
+    </div>
+
+    <div class="setting">
+      <label>Board size</label>
+      <div class="stepper" data-target="n">
+        <button class="minus">-</button><span id="nVal">5</span><button class="plus">+</button>
+      </div>
+    </div>
+
+    <div class="setting">
+      <label>Layers</label>
+      <div class="stepper" data-target="r">
+        <button class="minus">-</button><span id="rVal">3</span><button class="plus">+</button>
+      </div>
+    </div>
+
+    <div class="setting codeInputWrap">
+      <label for="codeInput">Puzzle code</label>
+      <input id="codeInput" placeholder="Enter code or see current">
+      <div class="codeButtons">
+        <button id="copyCodeBtn" class="btn btn-secondary btn-small">Copy Code</button>
+        <button id="loadCodeBtn" class="btn btn-primary btn-small">Load Code</button>
+      </div>
+    </div>
+
+    <div class="setting">
+      <label>Editor mode</label>
+      <label class="switch">
+        <input type="checkbox" id="editorToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Game Area -->
+  <div id="app">
+    <div class="editWrap">
+      <div class="boardGroup">
+        <div id="rowToggles" class="rowToggles"></div>
+        <div class="boardArea">
+          <div class="gridCard">
+            <div id="editGrid" class="grid main"></div>
+          </div>
+          <div id="colToggles" class="colToggles"></div>
+        </div>
+      </div>
+      <div id="previews" class="previewWrap"></div>
+    </div>
+
+    <div class="btnbar"><button id="clearBtn" class="btn btn-secondary">Clear</button></div>
+    <div id="cards"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <a href="https://t.me/qdiag" target="_blank" rel="noopener">Telegram&nbsp;channel&nbsp;@qdiag</a>
+  </div>
+
+  <!-- JavaScript modules -->
+  <script src="common.js"></script>    <!-- Common UI components -->
+  <script src="utils.js"></script>      <!-- Utility functions -->
+  <script src="storage.js"></script>    <!-- LocalStorage operations -->
+  <script src="encoder.js"></script>    <!-- Puzzle encoding/decoding -->
+  <script src="renderer.js"></script>   <!-- Rendering functions -->
+  <script src="tutorial.js"></script>   <!-- Tutorial system -->
+  <script src="script.js"></script>      <!-- Main game logic -->
+</body>
+</html>

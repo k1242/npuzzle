@@ -1,0 +1,338 @@
+/* ====== GAME VARIABLES ====== */
+:root {
+  --vertex-radius: 8px;
+  --edge-width: 4px;
+  --vertex-stroke: 0.5px;
+  
+  /* Colors */
+  --color-none: #f0f0f0;
+  --color-1: #6c63ff;
+  --color-2: #ff9563;
+  --color-3: #63d4ff;
+  --vertex-stroke-color: #333;
+  --edge-color: #d0d0d0;
+  --conflict-color: #ff4444;
+  --fixed-stroke: #000;
+}
+
+/* ====== PREVENT SCROLL ====== */
+html {
+  overflow: hidden;
+  height: 100vh;
+}
+
+body {
+  overflow: hidden !important;
+  height: 100vh !important;
+  overscroll-behavior: none;
+}
+
+/* ====== MAIN APP ====== */
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  margin-top: 5px;
+  height: calc(100vh - var(--headerH) - 40px);
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  #app {
+    gap: 12px;
+    padding: 8px;
+    height: calc(100vh - var(--headerH) - 35px);
+  }
+}
+
+@media (max-width: 600px) {
+  #app {
+    gap: 10px;
+    padding: 5px;
+    margin-top: 0;
+    height: calc(100vh - var(--headerH) - 30px);
+  }
+}
+
+/* ====== COLOR PALETTE ====== */
+.color-palette {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 600px) {
+  .color-palette {
+    gap: 6px;
+    padding: 6px;
+  }
+}
+
+.color-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid transparent;
+}
+
+@media (max-width: 600px) {
+  .color-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.color-btn[data-color="0"] {
+  border-color: #ddd;
+}
+
+.color-btn[data-color="0"] svg {
+  width: 18px;
+  height: 18px;
+  color: #666;
+}
+
+.color-btn.selected {
+  border-color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+@media (hover: hover) {
+  .color-btn:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+  
+  .color-btn.selected:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.color-btn:active {
+  transform: scale(0.95);
+}
+
+/* ====== CANVAS ====== */
+#canvasWrap {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  width: min(calc(100vw - 60px), calc(100vh - var(--headerH) - 120px));
+  height: min(calc(100vw - 60px), calc(100vh - var(--headerH) - 120px));
+  max-width: 600px;
+  max-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  #canvasWrap {
+    padding: 15px;
+    border-radius: 10px;
+    width: min(calc(100vw - 40px), calc(100vh - var(--headerH) - 100px));
+    height: min(calc(100vw - 40px), calc(100vh - var(--headerH) - 100px));
+  }
+}
+
+#graphCanvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* ====== GRAPH ELEMENTS ====== */
+.edge {
+  stroke: var(--edge-color);
+  stroke-width: var(--edge-width);
+  fill: none;
+  pointer-events: none;
+}
+
+.edge.conflict {
+  stroke: var(--conflict-color);
+  stroke-width: 5px;
+}
+
+.vertex {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vertex circle {
+  stroke: var(--vertex-stroke-color);
+  stroke-width: var(--vertex-stroke);
+  transition: all 0.15s ease;
+}
+
+.vertex.fixed circle {
+  stroke: var(--fixed-stroke);
+  stroke-width: 0.8px;
+}
+
+.vertex.conflict circle {
+  stroke: var(--conflict-color);
+  stroke-width: 1px;
+}
+
+@media (hover: hover) {
+  .vertex:hover circle {
+    filter: brightness(1.15);
+  }
+  
+  .vertex.fixed:hover circle {
+    filter: brightness(1.1);
+  }
+}
+
+/* ====== PUZZLE NUMBER ====== */
+#puzzleNumber {
+  color: #999;
+  font-size: 0.9em;
+  font-weight: normal;
+}
+
+/* ====== CODE INPUT ====== */
+.codeInputWrap {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.codeInputWrap label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.codeInput {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.codeInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(108,99,255,0.1);
+}
+
+.codeButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.codeButtons button {
+  flex: 1;
+}
+
+/* ====== HELP MODAL ====== */
+.helpModal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.helpBox {
+  max-width: 480px;
+  background: #fff;
+  padding: 30px 28px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 20px;
+}
+
+.helpBox h2 {
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  color: var(--text-primary);
+}
+
+.helpBox h3 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.helpBox p {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #666;
+}
+
+.helpBox ul {
+  margin: 0 0 16px 0;
+  padding-left: 24px;
+}
+
+.helpBox li {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #666;
+}
+
+.helpBox button {
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* ====== CORRECT BADGE (reuse from common.css) ====== */
+.correct-badge.show {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ====== FOOTER ADJUSTMENT ====== */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 10px;
+  background: var(--bg);
+  font-size: .85rem;
+  text-align: center;
+  z-index: 10;
+}

@@ -1,0 +1,299 @@
+/* ====== GAME-SPECIFIC VARIABLES ====== */
+:root {
+  --n: 4;
+  --size: 40px;
+  --gap: 0px;
+  --tile-empty: #fff;
+  --line-color: var(--text-primary);
+  --line-preview: #c0c0c0;
+  --line-hover: var(--accent);
+  --error-color: #ff4444;
+}
+
+/* ====== GAME LAYOUT ====== */
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 26px;
+  padding: 0 10px;
+}
+
+@media (max-width: 600px) {
+  #app {
+    margin-top: 16px;
+    padding: 0 5px;
+  }
+}
+
+.gameWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.boardArea {
+  position: relative;
+  background: #fff;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 600px) {
+  .boardArea {
+    padding: 10px;
+  }
+}
+
+.boardArea.solved {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(108, 99, 255, 0.3);
+}
+
+#gameGrid {
+  display: grid;
+  grid-template-columns: repeat(var(--n), var(--size));
+  grid-template-rows: repeat(var(--n), var(--size));
+  gap: var(--gap);
+  position: relative;
+}
+
+/* ====== CELLS ====== */
+.cell {
+  width: var(--size);
+  height: var(--size);
+  border: 1px solid var(--border-light);
+  background: var(--tile-empty);
+  position: relative;
+  cursor: pointer;
+}
+
+/* ====== CIRCLES ====== */
+.circle {
+  position: absolute;
+  width: calc(var(--size) * 0.4);
+  height: calc(var(--size) * 0.4);
+  min-width: 12px;
+  min-height: 12px;
+  max-width: 24px;
+  max-height: 24px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 15;
+  transition: all 0.2s ease;
+}
+
+.circle.white {
+  border: min(3px, calc(var(--size) * 0.075)) solid var(--text-primary);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.circle.black {
+  background: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.circle.error.white {
+  border-color: var(--error-color);
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+
+.circle.error.black {
+  background: var(--error-color);
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+
+/* ====== LINES ====== */
+.line {
+  position: absolute;
+  background: var(--line-color);
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.1s;
+  --line-thickness: max(3px, min(5px, calc(var(--size) * 0.1)));
+}
+
+.line.preview {
+  background: var(--line-preview);
+  z-index: 4;
+}
+
+.line.hover {
+  background: var(--line-hover);
+  z-index: 6;
+  opacity: 0.5;
+}
+
+/* Horizontal lines - extend equally left and right */
+.line.horizontal {
+  height: var(--line-thickness);
+  top: 50%;
+  transform: translateY(-50%);
+  left: calc(var(--line-thickness) * -0.5);
+  width: calc(100% + var(--line-thickness));
+}
+
+/* Vertical lines - extend equally top and bottom */
+.line.vertical {
+  width: var(--line-thickness);
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(var(--line-thickness) * -0.5);
+  height: calc(100% + var(--line-thickness));
+}
+
+/* ====== EDGE HOVER AREAS ====== */
+.edge {
+  position: absolute;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.edge.horizontal {
+  height: min(20px, calc(var(--size) * 0.5));
+  width: calc(var(--size) + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.edge.vertical {
+  width: min(20px, calc(var(--size) * 0.5));
+  height: calc(var(--size) + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.edge:hover {
+  background: rgba(108, 99, 255, 0.1);
+}
+
+/* ====== CODE INPUT SPECIFIC ====== */
+.codeInputWrap {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.codeInputWrap input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.codeButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#copyCodeBtn.copied {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ====== HELP MODAL ====== */
+.helpModal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.helpBox {
+  max-width: 480px;
+  background: #fff;
+  padding: 30px 28px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.helpBox h2 {
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.helpBox p {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* ====== TUTORIAL EXAMPLES ====== */
+.examples {
+  margin: 24px 0;
+}
+
+.example-group {
+  margin-bottom: 28px;
+}
+
+.example-group h3 {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.example-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.example {
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.example svg {
+  background: var(--bg);
+  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.example-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.example-label.correct {
+  color: #4a9d4a;
+  font-weight: 600;
+}
+
+.example-label.incorrect {
+  color: #d63638;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .example-row {
+    gap: 12px;
+  }
+  
+  .example svg {
+    width: 90px;
+    height: 90px;
+  }
+}
