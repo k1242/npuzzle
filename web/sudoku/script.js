@@ -4,8 +4,7 @@
 // Undo history
 const MAX_UNDO_HISTORY = 100;
 
-// Touch tracking for marker drag
-let lastTouchCell = null;
+// markedCells is now a Map: key -> color (1 or 2)
 
 /* ====== UNDO FUNCTIONALITY ====== */
 const createSnapshot = () => {
@@ -13,7 +12,8 @@ const createSnapshot = () => {
     board: board.map(row => [...row]),
     pencilMarks: pencilMarks.map(row => 
       row.map(set => new Set(set))
-    )
+    ),
+    markedCells: new Map(markedCells) // Save marked cells state
   };
 };
 
@@ -32,6 +32,7 @@ const performUndo = () => {
   const snapshot = undoHistory.pop();
   board = snapshot.board;
   pencilMarks = snapshot.pencilMarks;
+  markedCells = snapshot.markedCells || new Map(); // Restore marked cells
   
   // If auto-clear is enabled, clean up notes after undo
   if (autoClearNotes) {
@@ -114,7 +115,6 @@ const newGame = () => {
   isDraggingMarker = false;
   dragStarted = false;
   needsRender = false;
-  lastTouchCell = null;
   markedCells.clear(); // Clear marked cells
   gameModified = false; // Reset modified flag
   confirmingNewGame = false; // Reset confirmation state
@@ -785,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup game-specific handlers
   setupEventHandlers();
   
-  // Global mouse/touch handlers for marker dragging
+  // Global mouse handlers for marker dragging (desktop only)
   document.addEventListener('mouseup', () => {
     if (isDraggingMarker) {
       isDraggingMarker = false;
@@ -793,71 +793,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { dragStarted = false; }, 50); // Small delay to prevent click
     }
   });
-  
-  document.addEventListener('touchend', () => {
-    if (isDraggingMarker) {
-      isDraggingMarker = false;
-      dragStarted = false;
-      lastTouchCell = null;
-      needsRender = false;
-    }
-  });
-  
-  document.addEventListener('touchcancel', () => {
-    if (isDraggingMarker) {
-      isDraggingMarker = false;
-      dragStarted = false;
-      lastTouchCell = null;
-      needsRender = false;
-    }
-  });
-  
-  // Touch move handler for marker dragging
-  document.addEventListener('touchmove', (e) => {
-    if (markerMode && isDraggingMarker && e.touches.length === 1) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const element = document.elementFromPoint(touch.clientX, touch.clientY);
-      
-      if (element && element.classList.contains('cell')) {
-        const row = parseInt(element.dataset.row);
-        const col = parseInt(element.dataset.col);
-        
-        if (!isNaN(row) && !isNaN(col)) {
-          const key = `${row},${col}`;
-          
-          // Only process if we moved to a different cell
-          if (key !== lastTouchCell) {
-            lastTouchCell = key;
-            
-            if (markerDragMode === 'add' && !markedCells.has(key)) {
-              markedCells.add(key);
-              if (!needsRender) {
-                needsRender = true;
-                requestAnimationFrame(() => {
-                  if (needsRender) {
-                    render();
-                    needsRender = false;
-                  }
-                });
-              }
-            } else if (markerDragMode === 'remove' && markedCells.has(key)) {
-              markedCells.delete(key);
-              if (!needsRender) {
-                needsRender = true;
-                requestAnimationFrame(() => {
-                  if (needsRender) {
-                    render();
-                    needsRender = false;
-                  }
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-  }, { passive: false });
   
   // New game button
   const newBtn = $('#newBtn');
@@ -979,6 +914,25 @@ document.addEventListener('DOMContentLoaded', () => {
       // If turning on, immediately clear invalid notes
       if (autoClearNotes) {
         clearInvalidNotes();
+        render();
+      }
+      saveGame();
+    };
+  }
+  
+  // Multicolor brush toggle
+  const multicolorToggle = $('#multicolorBrush');
+  if (multicolorToggle) {
+    multicolorToggle.checked = multicolorBrush;
+    multicolorToggle.onchange = () => {
+      multicolorBrush = multicolorToggle.checked;
+      // If turning off multicolor, convert all color 2 markers to color 1
+      if (!multicolorBrush) {
+        markedCells.forEach((color, key) => {
+          if (color === 2) {
+            markedCells.set(key, 1);
+          }
+        });
         render();
       }
       saveGame();

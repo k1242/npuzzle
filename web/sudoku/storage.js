@@ -16,6 +16,7 @@ const saveGame = () => {
     pencilMarks: pencilMarks.map(row => 
       row.map(set => Array.from(set))
     ),
+    markedCells: Array.from(markedCells.entries()), // Save as array of [key, value] pairs
     initialBoard: initialBoard && initialBoard.length ? initialBoard.map(row => [...row]) : board.map(row => [...row]),
     solved,
     pencilMode,
@@ -28,12 +29,14 @@ const saveGame = () => {
     showBiValue,
     prefillNotes,
     autoClearNotes,
+    multicolorBrush,
     gameModified,
     undoHistory: (undoHistory || []).map(snap => ({
       board: snap.board,
       pencilMarks: snap.pencilMarks.map(row => 
         row.map(set => Array.from(set))
-      )
+      ),
+      markedCells: snap.markedCells ? Array.from(snap.markedCells.entries()) : []
     }))
   };
   
@@ -67,6 +70,13 @@ const loadSavedGame = () => {
       row.map(arr => new Set(arr))
     );
     
+    // Restore marked cells (convert array back to Map)
+    if (data.markedCells) {
+      markedCells = new Map(data.markedCells);
+    } else {
+      markedCells = new Map();
+    }
+    
     // Restore initial board
     initialBoard = data.initialBoard || board.map(row => [...row]);
     window.initialBoard = initialBoard;
@@ -88,7 +98,8 @@ const loadSavedGame = () => {
         board: snap.board,
         pencilMarks: snap.pencilMarks.map(row =>
           row.map(arr => new Set(arr))
-        )
+        ),
+        markedCells: snap.markedCells ? new Map(snap.markedCells) : new Map()
       }));
     } else {
       undoHistory = [];
@@ -106,13 +117,12 @@ const loadSavedGame = () => {
     showBiValue = data.showBiValue || false;
     prefillNotes = data.prefillNotes || false;
     autoClearNotes = data.autoClearNotes || false;
+    multicolorBrush = data.multicolorBrush || false;
     gameModified = data.gameModified || false;
     confirmingNewGame = false; // Always reset confirmation state on load
     isDraggingMarker = false; // Reset drag state
     dragStarted = false;
     needsRender = false;
-    lastTouchCell = null;
-    markedCells.clear(); // Clear markers as they're not saved
     
     // Update UI elements
     const pencilBtn = $('#pencilBtn');
@@ -124,6 +134,7 @@ const loadSavedGame = () => {
     const biValuesToggle = $('#highlightBiValues');
     const prefillToggle = $('#prefillNotes');
     const autoClearToggle = $('#autoClearNotes');
+    const multicolorToggle = $('#multicolorBrush');
     
     if (pencilBtn) pencilBtn.classList.toggle('active', pencilMode);
     if (eraserBtn) eraserBtn.classList.toggle('active', eraserMode);
@@ -135,6 +146,7 @@ const loadSavedGame = () => {
     if (biValuesToggle) biValuesToggle.checked = showBiValue;
     if (prefillToggle) prefillToggle.checked = prefillNotes;
     if (autoClearToggle) autoClearToggle.checked = autoClearNotes;
+    if (multicolorToggle) multicolorToggle.checked = multicolorBrush;
     
     updatePuzzleNumber();
     updateUndoButton();

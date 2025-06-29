@@ -120,7 +120,8 @@ const renderBoard = () => {
       const cellKey = `${r},${c}`;
       
       // Check if cell is marked - this has priority
-      const isMarked = markedCells.has(cellKey);
+      const markedColor = markedCells.get(cellKey);
+      const isMarked = markedColor !== undefined;
       
       // Highlight related cells (only if feature is enabled and not marked)
       if (!isMarked && highlightRelatedCells && relatedCells.has(cellKey)) {
@@ -148,7 +149,11 @@ const renderBoard = () => {
       
       // Apply marked class - this overrides other highlights
       if (isMarked) {
-        cell.classList.add('marked');
+        if (multicolorBrush && markedColor === 2) {
+          cell.classList.add('marked2');
+        } else {
+          cell.classList.add('marked');
+        }
       }
       
       // Check for bi-value cells
@@ -180,7 +185,7 @@ const renderBoard = () => {
         cell.appendChild(marksContainer);
       }
       
-      // Mouse down handler for drag marking
+      // Mouse down handler for drag marking (desktop only)
       cell.onmousedown = (e) => {
         if (markerMode && e.button === 0) { // Left click only
           e.preventDefault();
@@ -189,12 +194,30 @@ const renderBoard = () => {
           const key = `${r},${c}`;
           
           // Determine drag mode based on initial cell
-          if (markedCells.has(key)) {
-            markerDragMode = 'remove';
-            markedCells.delete(key);
+          const currentColor = markedCells.get(key);
+          if (currentColor !== undefined) {
+            // Cell is marked, determine next state
+            if (multicolorBrush) {
+              if (currentColor === 1) {
+                // Change to color 2
+                markerDragMode = 'add';
+                markerDragColor = 2;
+                markedCells.set(key, 2);
+              } else {
+                // Remove marking
+                markerDragMode = 'remove';
+                markedCells.delete(key);
+              }
+            } else {
+              // Single color mode - just remove
+              markerDragMode = 'remove';
+              markedCells.delete(key);
+            }
           } else {
+            // Cell not marked - add color 1
             markerDragMode = 'add';
-            markedCells.add(key);
+            markerDragColor = 1;
+            markedCells.set(key, 1);
           }
           render();
         }
@@ -203,19 +226,33 @@ const renderBoard = () => {
       // Click handler
       cell.onclick = (e) => {
         e.stopPropagation();
-        // Prevent click after drag or touch
+        // Prevent click after drag
         if (dragStarted) {
           dragStarted = false;
           return;
         }
         
         if (markerMode) {
-          // Toggle marker on this cell only if not dragging
+          // Toggle marker on this cell
           const key = `${r},${c}`;
-          if (markedCells.has(key)) {
-            markedCells.delete(key);
+          const currentColor = markedCells.get(key);
+          
+          if (multicolorBrush) {
+            // Cycle: none -> color1 -> color2 -> none
+            if (currentColor === undefined) {
+              markedCells.set(key, 1);
+            } else if (currentColor === 1) {
+              markedCells.set(key, 2);
+            } else {
+              markedCells.delete(key);
+            }
           } else {
-            markedCells.add(key);
+            // Simple toggle
+            if (currentColor !== undefined) {
+              markedCells.delete(key);
+            } else {
+              markedCells.set(key, 1);
+            }
           }
           render();
         } else if (eraserMode && !fixed[r][c]) {
@@ -228,14 +265,6 @@ const renderBoard = () => {
         }
       };
       
-      // Prevent default touch behavior
-      cell.addEventListener('touchmove', (e) => {
-        if (markerMode) {
-          e.preventDefault();
-        }
-      }, { passive: false });
-
-
       // Prevent context menu on long press
       cell.addEventListener('contextmenu', (e) => {
         if (markerMode) {
@@ -247,16 +276,19 @@ const renderBoard = () => {
       cell.onmouseenter = (e) => {
         if (markerMode && isDraggingMarker) {
           const key = `${r},${c}`;
-          if (markerDragMode === 'add' && !markedCells.has(key)) {
-            markedCells.add(key);
-            if (!needsRender) {
-              needsRender = true;
-              requestAnimationFrame(() => {
-                if (needsRender) {
-                  render();
-                  needsRender = false;
-                }
-              });
+          if (markerDragMode === 'add') {
+            const currentColor = markedCells.get(key);
+            if (currentColor !== markerDragColor) {
+              markedCells.set(key, markerDragColor);
+              if (!needsRender) {
+                needsRender = true;
+                requestAnimationFrame(() => {
+                  if (needsRender) {
+                    render();
+                    needsRender = false;
+                  }
+                });
+              }
             }
           } else if (markerDragMode === 'remove' && markedCells.has(key)) {
             markedCells.delete(key);
@@ -273,28 +305,7 @@ const renderBoard = () => {
         }
       };
       
-      // Touch events for mobile
-      cell.addEventListener('touchstart', (e) => {
-        if (markerMode) {
-          e.preventDefault();
-          e.stopPropagation();
-          isDraggingMarker = true;
-          dragStarted = true;
-          const key = `${r},${c}`;
-          
-          // Determine drag mode based on initial cell
-          if (markedCells.has(key)) {
-            markerDragMode = 'remove';
-            markedCells.delete(key);
-          } else {
-            markerDragMode = 'add';
-            markedCells.add(key);
-          }
-          render();
-        }
-      }, { passive: false });
-      
-      // Store cell coordinates for touch move detection
+      // Store cell coordinates for potential future use
       cell.dataset.row = r;
       cell.dataset.col = c;
       
@@ -337,5 +348,3 @@ const animateCell = (row, col, className) => {
     }, 300);
   }
 };
-
-

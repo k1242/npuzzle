@@ -116,6 +116,14 @@
           <span class="slider"></span>
         </label>
       </div>
+      
+      <div class="setting">
+        <label for="multicolorBrush" title="Enable two-color marking mode">Multicolor brush</label>
+        <label class="switch">
+          <input type="checkbox" id="multicolorBrush">
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
     
     <div class="settings-section" style="border-bottom: none;">
@@ -222,7 +230,7 @@
       <h3>Modes</h3>
       <ul>
         <li><strong>Pencil mode (N):</strong> Make small notes in cells instead of placing numbers</li>
-        <li><strong>Marker mode (M):</strong> Highlight cells for analysis. Double-click the button or press Shift+M to clear all markers</li>
+        <li><strong>Marker mode (M):</strong> Highlight cells for analysis. Click to mark/unmark cells. With multicolor enabled: peach → green → clear. Desktop only: drag to mark multiple cells. Double-click button or Shift+M to clear all</li>
         <li><strong>Eraser mode (E):</strong> Click cells to clear them quickly</li>
       </ul>
       
@@ -243,9 +251,10 @@
     let pencilMode = false;
     let eraserMode = false;
     let markerMode = false;
-    let markedCells = new Set();
+    let markedCells = new Map(); // Changed from Set to Map for multicolor support
     let isDraggingMarker = false;
     let markerDragMode = 'add'; // 'add' or 'remove'
+    let markerDragColor = 1; // Track which color we're dragging
     let dragStarted = false;
     let needsRender = false;
     let currentPuzzleIndex = -1;
@@ -258,6 +267,7 @@
     let prefillNotes = false;
     let autoClearNotes = false;
     let highlightRelatedCells = true;
+    let multicolorBrush = false;
     let gameModified = false;
     let confirmingNewGame = false;
     window.eraserMode = eraserMode;
