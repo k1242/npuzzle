@@ -4,6 +4,7 @@ scp -r ./* root@qdiag.xyz:/var/www/qdiag.xyz/
 scp -r ./dino root@qdiag.xyz:/var/www/qdiag.xyz/
 scp -r ./_sudoku root@qdiag.xyz:/var/www/qdiag.xyz/
 scp -r ./sudoku root@qdiag.xyz:/var/www/qdiag.xyz/
+scp -r ./blocks root@qdiag.xyz:/var/www/qdiag.xyz/
 ```
 
 ```

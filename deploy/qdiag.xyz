@@ -26,11 +26,8 @@ server {
     location = /sudoku  { return 301 /sudoku/; }
     location /sudoku/   { try_files $uri $uri/ =404; }
 
-    location = /dino  { return 301 /dino/; }
-    location /dino/   { try_files $uri $uri/ =404; }
-
-    location = /qris  { return 301 /qris/; }
-    location /qris/   { try_files $uri $uri/ =404; }
+    location = /blocks  { return 301 /blocks/; }
+    location /blocks/   { try_files $uri $uri/ =404; }
 
     # --- backend ---
     location /api/ {
