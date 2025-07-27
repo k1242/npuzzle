@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> puzzles;
 
     std::vector<std::map<int,int>> batch_stats;
-    batch_stats.reserve(1012);
+    batch_stats.reserve(10000);
 
     if (argc == 2) {
         std::ifstream fin(argv[1]);
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     const std::chrono::duration<double> elapsed = globalEnd - globalStart; // in seconds
 
     // Accumulate tech statistics
-    std::vector<int> total(21, 0);
+    std::vector<int> total(26, 0);
     for (const auto& m : batch_stats)
         for (auto [id, cnt] : m)
             total[id] += cnt;

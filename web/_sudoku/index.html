@@ -8,15 +8,16 @@
   <!-- Open Graph meta tags -->
   <meta property="og:title" content="Sudoku">
   <meta property="og:description" content="Classic number puzzle">
-  <meta property="og:type" content="website">
   <meta property="og:image" content="https://qdiag.xyz/assets/sudoku-preview.png">
+  <meta property="og:type" content="website">
   <meta property="og:url" content="https://qdiag.xyz/sudoku/">
   
   <!-- Fonts and styles -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="common.css">
   <link rel="stylesheet" href="styles.css">
-
+  <link rel="stylesheet" href="multiplayer.css">
+  
   <!-- Favicons -->
   <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/assets/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/assets/icons/favicon-32x32.png">
@@ -42,20 +43,37 @@
             <div class="game-name">Sudoku</div>
             <div class="game-desc">Classic</div>
           </a>
-          <a href="/masyu/" class="game-item">
+          <!-- <a href="/masyu/" class="game-item">
             <div class="game-name">Masyu</div>
             <div class="game-desc">Draw a loop</div>
-          </a>
-          <a href="/bmf/" class="game-item">
+          </a> -->
+          <!-- <a href="/bmf/" class="game-item">
             <div class="game-name">BMF</div>
             <div class="game-desc">Find patterns</div>
-          </a>
+          </a> -->
         </div>
       </div>
     </div>
     <div class="rightControls">
       <a href="#" id="helpLink">How to play</a>
-      <button id="newBtn" class="btn btn-primary">New Game</button>
+      <div class="new-game-wrapper">
+        <button id="newBtn" class="btn btn-primary btn-with-indicator">
+          <span class="btn-text">New Game</span>
+          <span class="btn-divider"></span>
+          <span class="btn-indicator" id="difficultyIndicator">MS</span>
+        </button>
+        <div id="difficultyDropdown" class="difficulty-dropdown">
+          <div class="slider-group">
+            <label>Difficulty</label>
+            <input type="range" id="difficultySlider" min="0" max="4" value="1" step="1">
+          </div>
+          <div class="slider-group">
+            <label>Duration</label>
+            <input type="range" id="depthSlider" min="0" max="2" value="1" step="1">
+          </div>
+          <div class="difficulty-display" id="difficultyDisplay">Medium Sea</div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -65,22 +83,6 @@
     <div class="settings-section">
       <h3 class="settings-header">Highlights</h3>
       
-      <div class="setting">
-        <label for="highlightRelatedCells" title="Highlight row, column and box of selected cell">Related cells</label>
-        <label class="switch">
-          <input type="checkbox" id="highlightRelatedCells">
-          <span class="slider"></span>
-        </label>
-      </div>
-
-      <div class="setting">
-        <label for="highlightAffectedAreas" title="Highlight rows/columns/blocks affected by selected number">Affected areas</label>
-        <label class="switch">
-          <input type="checkbox" id="highlightAffectedAreas">
-          <span class="slider"></span>
-        </label>
-      </div>
-
       <div class="setting">
         <label for="highlightPencilMarks" title="Highlight selected number in pencil marks">Notes</label>
         <label class="switch">
@@ -116,15 +118,60 @@
           <span class="slider"></span>
         </label>
       </div>
+      
+      <div class="setting">
+        <label for="multicolorBrush" title="Enable two-color marking mode">Multicolor brush</label>
+        <label class="switch">
+          <input type="checkbox" id="multicolorBrush">
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
     
-    <div class="settings-section" style="border-bottom: none;">
+    <div class="settings-section settings-section-small">
       <div class="setting codeInputWrap">
         <label for="codeInput">Puzzle code <span id="puzzleNumber"></span></label>
         <input type="text" id="codeInput" class="codeInput" placeholder="Paste code">
         <div class="codeButtons">
-          <button id="copyCodeBtn" class="btn btn-secondary btn-small">Copy Code</button>
-          <button id="loadCodeBtn" class="btn btn-primary btn-small">Load Code</button>
+          <button id="copyCodeBtn" class="btn btn-secondary btn-small">Copy</button>
+          <button id="loadCodeBtn" class="btn btn-secondary btn-small">Load</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Multiplayer Section -->
+    <div class="settings-section settings-section-small" id="multiplayerSection">
+      <div class="multiplayer-controls">
+        <label class="section-label">Multiplayer room</label>
+        
+        <!-- No room state -->
+        <div id="multiplayerNoRoom">
+          <div class="multiplayer-buttons">
+            <button id="createRoomBtn" class="btn btn-secondary btn-small">Create</button>
+            <button id="joinRoomBtn" class="btn btn-secondary btn-small">Join</button>
+          </div>
+          
+          <!-- Join input group (hidden by default) -->
+          <div class="join-input-group" id="joinInputGroup">
+            <input type="text" id="roomCodeInput" placeholder="123456" maxlength="6" pattern="\d{6}">
+            <button id="joinConfirmBtn" class="btn btn-primary btn-xs">✓</button>
+            <button id="joinCancelBtn" class="btn btn-secondary btn-xs">✕</button>
+          </div>
+        </div>
+        
+        <!-- In room state (hidden by default) -->
+        <div id="multiplayerInRoom" style="display: none;">
+          <div class="room-status">
+            <span class="room-code" id="roomCode" title="Click to copy">123456</span>
+            <div class="player-info">
+              <svg class="player-icon" width="16" height="16" viewBox="0 -0.5 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M14.9769 14H10.0229C8.56488 14.0724 7.2731 14.963 6.68693 16.3C5.97993 17.688 7.39093 19 9.03193 19H15.9679C17.6099 19 19.0209 17.688 18.3129 16.3C17.7268 14.963 16.435 14.0724 14.9769 14Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M15.4999 8C15.4999 9.65685 14.1568 11 12.4999 11C10.8431 11 9.49994 9.65685 9.49994 8C9.49994 6.34315 10.8431 5 12.4999 5C13.2956 5 14.0587 5.31607 14.6213 5.87868C15.1839 6.44129 15.4999 7.20435 15.4999 8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span id="playerCount">1</span>
+              <button id="leaveRoomBtn" class="btn btn-secondary btn-xs">Leave</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -199,7 +246,7 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <a href="https://t.me/+lqqhXEjyPqNkNTFi" target="_blank">Telegram channel @qdiag</a>
+    <a href="https://t.me/qdiag" target="_blank">Telegram channel @qdiag</a>
   </footer>
 
   <!-- Help modal -->
@@ -214,29 +261,82 @@
         <li>Use keyboard (1-9) to place numbers</li>
         <li>Press the same number again to remove it</li>
         <li>Navigate with arrow keys or WASD</li>
-        <li>Press Delete, Backspace or 0 to clear a cell</li>
+        <li>Press Delete, Backspace ot 0 to clear a cell</li>
         <li>Press U or Ctrl+Z to undo</li>
       </ul>
       
       <h3>Modes</h3>
       <ul>
         <li><strong>Pencil mode (N):</strong> Make small notes in cells instead of placing numbers</li>
-        <li><strong>Marker mode (M):</strong> Highlight cells for analysis. Double-click the button or press Shift+M to clear all markers</li>
+        <li><strong>Marker mode (M):</strong> Highlight cells for analysis. Click to mark/unmark cells. With multicolor enabled: peach → green → clear. Desktop only: drag to mark multiple cells. Double-click button or Shift+M to clear all</li>
         <li><strong>Eraser mode (E):</strong> Click cells to clear them quickly</li>
+      </ul>
+      
+      <h3>Difficulty Levels</h3>
+      <ul>
+        <li>Use the dropdown next to "New Game" to select difficulty and duration</li>
+        <li>Difficulty ranges from Easy to Insane</li>
+        <li>Duration indicates puzzle length: S (Small), M (Medium), L (Large)</li>
+      </ul>
+      
+      <h3>Puzzle Codes</h3>
+      <ul>
+        <li>Load puzzles by code or number (e.g., <code>#123</code> or <code>MS#456</code>)</li>
+        <li>Difficulty codes: E=Easy, M=Medium, H=Hard, D=Diabolical, I=Insane</li>
+        <li>Duration codes: S=Small, M=Medium, L=Large</li>
       </ul>
       
       <button id="closeHelp" class="btn btn-primary">Got it!</button>
     </div>
   </div>
 
-  <!-- Notification -->
-  <div class="correct-badge">
-    <span class="correct-icon">✓</span>
-    <span class="correct-text">Correct!</span>
-  </div>
-
+  <!-- Socket.io -->
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  
   <!-- Scripts -->
-  <!-- Main application module -->
-  <script type="module" src="src/app.js"></script>
+  <script src="puzzle_list.js"></script>
+  <script>
+    // Global game state variables - must be declared before other scripts
+    let board = [];
+    let solution = [];
+    let fixed = [];
+    let pencilMarks = [];
+    let selectedCell = null;
+    let solved = false;
+    let pencilMode = false;
+    let eraserMode = false;
+    let markerMode = false;
+    let markedCells = new Map(); // Changed from Set to Map for multicolor support
+    let isDraggingMarker = false;
+    let markerDragMode = 'add'; // 'add' or 'remove'
+    let markerDragColor = 1; // Track which color we're dragging
+    let dragStarted = false;
+    let needsRender = false;
+    let currentPuzzleIndex = -1;
+    let initialBoard = [];
+    let undoHistory = [];
+    let selectedNumber = null;
+    let highlightPencilMarks = true;
+    let highlightAffectedAreas = true; // Always on
+    let showBiValue = false;
+    let prefillNotes = false;
+    let autoClearNotes = false;
+    let highlightRelatedCells = true; // Always on
+    let multicolorBrush = false;
+    let gameModified = false;
+    let confirmingNewGame = false;
+    // Difficulty settings
+    let currentDifficulty = 1; // Medium (0-4: Easy, Medium, Hard, Diabolical, Extreme)
+    let currentDepth = 1; // Sea (0-2: Lake, Sea, Ocean)
+    window.eraserMode = eraserMode;
+    window.initialBoard = initialBoard;
+  </script>
+  <script src="utils.js"></script>
+  <script src="common.js"></script>
+  <script src="multiplayer.js"></script>
+  <script src="encoder.js"></script>
+  <script src="storage.js"></script>
+  <script src="renderer.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku OCR Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.0/dist/ort.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .status {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .status.ready { color: #4ade80; }
+        .status.error { color: #f87171; }
+        
+        .upload-area {
+            border: 2px dashed #333;
+            border-radius: 16px;
+            padding: 3rem;
+            margin: 0 auto 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #111;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #1a1a1a;
+        }
+        
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #1f1f1f;
+        }
+        
+        .upload-area.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        input[type="file"] { display: none; }
+        
+        .workspace {
+            display: none;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .image-container {
+            position: relative;
+            background: #111;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .image-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: crosshair;
+        }
+        
+        .image-wrapper img {
+            max-width: 100%;
+            display: block;
+            border-radius: 4px;
+        }
+        
+        .overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+        
+        .corner-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            background: #764ba2;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: move;
+            z-index: 10;
+        }
+        
+        .corner-marker.active {
+            background: #4ade80;
+            border-color: #22c55e;
+        }
+        
+        .instructions {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .cells-preview {
+            background: #111;
+            border-radius: 8px;
+            padding: 1rem;
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .cells-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 2px;
+            margin-bottom: 1rem;
+        }
+        
+        .cell-preview {
+            aspect-ratio: 1;
+            background: #000;
+            border: 1px solid #222;
+            position: relative;
+        }
+        
+        .cell-preview canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+        
+        .cell-preview .digit-label {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: #667eea;
+            color: white;
+            font-size: 10px;
+            padding: 1px 3px;
+            border-radius: 2px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #e0e0e0;
+        }
+        
+        .btn:hover { transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .result {
+            display: none;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+        
+        .result-string {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: monospace;
+            word-break: break-all;
+            margin-bottom: 1rem;
+            color: #e0e0e0;
+        }
+        
+        .processing {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sudoku Scanner</h1>
+        <p class="subtitle">Upload a sudoku photo and select the grid corners</p>
+        <p class="status" id="status">Loading ONNX model...</p>
+        
+        <div class="upload-area disabled" id="uploadArea">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2" style="margin-bottom: 1rem;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Drop image here or click to upload</p>
+        </div>
+        
+        <input type="file" id="fileInput" accept="image/*">
+        
+        <div class="workspace" id="workspace">
+            <div class="image-container">
+                <div class="instructions" id="instructions">
+                    Click on the four corners of the sudoku grid (top-left → top-right → bottom-right → bottom-left)
+                </div>
+                <div class="image-wrapper" id="imageWrapper">
+                    <img id="mainImage" alt="Sudoku image">
+                    <canvas class="overlay-canvas" id="overlayCanvas"></canvas>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-secondary" onclick="resetCorners()">Reset Corners</button>
+                    <button class="btn btn-primary" id="scanBtn" onclick="scanGrid()" disabled>Scan Grid</button>
+                </div>
+            </div>
+            
+            <div class="cells-preview">
+                <h3 style="margin-bottom: 0.5rem;">Extracted Cells (28×28)</h3>
+                <p style="font-size: 0.8rem; color: #666; margin-bottom: 1rem;">Smart cropping centers digits for better recognition</p>
+                <div class="cells-grid" id="cellsGrid"></div>
+                <div class="processing" id="processing" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Processing cells...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="result" id="result">
+            <h3 style="margin-bottom: 1rem;">Extracted Sudoku String:</h3>
+            <div class="result-string" id="resultString"></div>
+            <button class="btn btn-primary" onclick="copyResult()">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        let session = null;
+        let modelLoaded = false;
+        let currentImage = null;
+        let corners = [];
+        let cornersSelected = false;
+        
+        // Initialize ONNX Runtime
+        async function initModel() {
+            const statusEl = document.getElementById('status');
+            const uploadArea = document.getElementById('uploadArea');
+            
+            try {
+                session = await ort.InferenceSession.create('./mnist-8.onnx');
+                console.log('MNIST model loaded successfully');
+                
+                modelLoaded = true;
+                statusEl.textContent = 'Model ready';
+                statusEl.classList.add('ready');
+                uploadArea.classList.remove('disabled');
+            } catch (e) {
+                console.error('Failed to load model:', e);
+                statusEl.textContent = 'Failed to load model. Check console for details.';
+                statusEl.classList.add('error');
+            }
+        }
+        
+        // File handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('click', () => {
+            if (modelLoaded) fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', handleFile);
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (modelLoaded) uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (!modelLoaded) return;
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processImage(file);
+            }
+        });
+        
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (file && modelLoaded) processImage(file);
+        }
+        
+        async function processImage(file) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const img = document.getElementById('mainImage');
+                img.src = e.target.result;
+                await img.decode();
+                
+                currentImage = img;
+                setupImageInteraction();
+                document.getElementById('workspace').style.display = 'grid';
+                resetCorners();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function setupImageInteraction() {
+            const wrapper = document.getElementById('imageWrapper');
+            const canvas = document.getElementById('overlayCanvas');
+            const img = document.getElementById('mainImage');
+            
+            // Set canvas size to match image
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            // Click handler for selecting corners
+            canvas.addEventListener('click', handleCanvasClick);
+        }
+        
+        function handleCanvasClick(e) {
+            if (corners.length >= 4) return;
+            
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            addCorner(x, y);
+        }
+        
+        function addCorner(x, y) {
+            corners.push({ x, y });
+            
+            // Create visual marker
+            const marker = document.createElement('div');
+            marker.className = 'corner-marker';
+            marker.style.left = x + 'px';
+            marker.style.top = y + 'px';
+            marker.dataset.cornerIndex = corners.length - 1;
+            
+            // Make marker draggable
+            marker.addEventListener('mousedown', startDrag);
+            
+            document.getElementById('imageWrapper').appendChild(marker);
+            
+            updateOverlay();
+            
+            if (corners.length === 4) {
+                cornersSelected = true;
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('instructions').textContent = 
+                    'Grid selected! Adjust corners by dragging them, then click "Scan Grid"';
+            }
+        }
+        
+        function startDrag(e) {
+            e.preventDefault();
+            const marker = e.target;
+            const cornerIndex = parseInt(marker.dataset.cornerIndex);
+            
+            const moveHandler = (e) => {
+                const rect = document.getElementById('overlayCanvas').getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                corners[cornerIndex] = { x, y };
+                marker.style.left = x + 'px';
+                marker.style.top = y + 'px';
+                
+                updateOverlay();
+            };
+            
+            const upHandler = () => {
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', upHandler);
+            };
+            
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', upHandler);
+        }
+        
+        function updateOverlay() {
+            const canvas = document.getElementById('overlayCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (corners.length > 0) {
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                corners.forEach((corner, i) => {
+                    if (i === 0) ctx.moveTo(corner.x, corner.y);
+                    else ctx.lineTo(corner.x, corner.y);
+                });
+                
+                if (corners.length === 4) {
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(102, 126, 234, 0.1)';
+                    ctx.fill();
+                }
+                
+                ctx.stroke();
+            }
+        }
+        
+        function resetCorners() {
+            corners = [];
+            cornersSelected = false;
+            
+            // Remove all markers
+            document.querySelectorAll('.corner-marker').forEach(m => m.remove());
+            
+            // Clear overlay
+            updateOverlay();
+            
+            // Reset UI
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('instructions').textContent = 
+                'Click on the four corners of the sudoku grid (top-left → top-right → bottom-right → bottom-left)';
+            document.getElementById('cellsGrid').innerHTML = '';
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        async function scanGrid() {
+            if (!cornersSelected || corners.length !== 4) return;
+            
+            document.getElementById('processing').style.display = 'block';
+            document.getElementById('cellsGrid').innerHTML = '';
+            
+            const img = document.getElementById('mainImage');
+            const grid = [];
+            const cellsContainer = document.getElementById('cellsGrid');
+            
+            for (let row = 0; row < 9; row++) {
+                const rowData = [];
+                
+                for (let col = 0; col < 9; col++) {
+                    // Calculate source coordinates using bilinear interpolation
+                    const u = (col + 0.5) / 9;
+                    const v = (row + 0.5) / 9;
+                    
+                    // Bilinear interpolation to find source point
+                    const x = (1 - u) * (1 - v) * corners[0].x + u * (1 - v) * corners[1].x + 
+                             u * v * corners[2].x + (1 - u) * v * corners[3].x;
+                    const y = (1 - u) * (1 - v) * corners[0].y + u * (1 - v) * corners[1].y + 
+                             u * v * corners[2].y + (1 - u) * v * corners[3].y;
+                    
+                    // Calculate adaptive cell size based on local grid distortion
+                    const u1 = col / 9;
+                    const u2 = (col + 1) / 9;
+                    const v1 = row / 9;
+                    const v2 = (row + 1) / 9;
+                    
+                    // Get cell corners
+                    const tl = {
+                        x: (1-u1)*(1-v1)*corners[0].x + u1*(1-v1)*corners[1].x + u1*v1*corners[2].x + (1-u1)*v1*corners[3].x,
+                        y: (1-u1)*(1-v1)*corners[0].y + u1*(1-v1)*corners[1].y + u1*v1*corners[2].y + (1-u1)*v1*corners[3].y
+                    };
+                    const br = {
+                        x: (1-u2)*(1-v2)*corners[0].x + u2*(1-v2)*corners[1].x + u2*v2*corners[2].x + (1-u2)*v2*corners[3].x,
+                        y: (1-u2)*(1-v2)*corners[0].y + u2*(1-v2)*corners[1].y + u2*v2*corners[2].y + (1-u2)*v2*corners[3].y
+                    };
+                    
+                    const cellW = Math.abs(br.x - tl.x);
+                    const cellH = Math.abs(br.y - tl.y);
+                    
+                    // Create cell preview container
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'cell-preview';
+                    
+                    // Recognize digit for this cell
+                    const digit = await extractAndRecognizeCell(
+                        img, x - cellW/2, y - cellH/2, cellW, cellH, cellDiv
+                    );
+                    
+                    rowData.push(digit);
+                    cellsContainer.appendChild(cellDiv);
+                }
+                
+                grid.push(rowData);
+            }
+            
+            // Display results
+            displayResult(grid);
+            document.getElementById('processing').style.display = 'none';
+        }
+        
+        async function extractAndRecognizeCell(img, x, y, w, h, cellDiv) {
+            // Create temporary canvas for extraction
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = Math.ceil(w);
+            tempCanvas.height = Math.ceil(h);
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Extract cell from image
+            tempCtx.drawImage(img, x, y, w, h, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Crop edges to remove cell borders (20% from each side)
+            const cropRatio = 0.2;
+            const cropX = Math.floor(tempCanvas.width * cropRatio);
+            const cropY = Math.floor(tempCanvas.height * cropRatio);
+            const cropW = Math.floor(tempCanvas.width * (1 - 2 * cropRatio));
+            const cropH = Math.floor(tempCanvas.height * (1 - 2 * cropRatio));
+            
+            // Create cropped canvas
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = cropW;
+            croppedCanvas.height = cropH;
+            const croppedCtx = croppedCanvas.getContext('2d');
+            croppedCtx.drawImage(tempCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            
+            const tempData = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
+            
+            // Calculate local threshold using Otsu's method
+            const histogram = new Array(256).fill(0);
+            let pixelCount = 0;
+            
+            for (let i = 0; i < tempData.data.length; i += 4) {
+                const gray = Math.floor(
+                    tempData.data[i] * 0.299 + 
+                    tempData.data[i + 1] * 0.587 + 
+                    tempData.data[i + 2] * 0.114
+                );
+                histogram[gray]++;
+                pixelCount++;
+            }
+            
+            // Otsu's method
+            let sum = 0;
+            for (let i = 0; i < 256; i++) sum += i * histogram[i];
+            
+            let sumB = 0, wB = 0, wF = 0;
+            let maxVar = 0, threshold = 0;
+            
+            for (let t = 0; t < 256; t++) {
+                wB += histogram[t];
+                if (wB === 0) continue;
+                
+                wF = pixelCount - wB;
+                if (wF === 0) break;
+                
+                sumB += t * histogram[t];
+                
+                const mB = sumB / wB;
+                const mF = (sum - sumB) / wF;
+                
+                const varBetween = wB * wF * (mB - mF) * (mB - mF);
+                
+                if (varBetween > maxVar) {
+                    maxVar = varBetween;
+                    threshold = t;
+                }
+            }
+            
+            // Create binary image
+            const binaryData = new Uint8Array(croppedCanvas.width * croppedCanvas.height);
+            for (let i = 0; i < tempData.data.length; i += 4) {
+                const gray = tempData.data[i] * 0.299 + 
+                           tempData.data[i + 1] * 0.587 + 
+                           tempData.data[i + 2] * 0.114;
+                binaryData[i / 4] = gray < threshold ? 1 : 0;
+            }
+            
+            // Find connected components to isolate digit
+            const labels = new Int32Array(binaryData.length);
+            let nextLabel = 1;
+            const equivalences = new Map();
+            
+            // First pass - label components
+            for (let y = 0; y < croppedCanvas.height; y++) {
+                for (let x = 0; x < croppedCanvas.width; x++) {
+                    const idx = y * croppedCanvas.width + x;
+                    if (binaryData[idx] === 0) continue;
+                    
+                    // Check neighbors
+                    const neighbors = [];
+                    if (x > 0 && labels[idx - 1] > 0) neighbors.push(labels[idx - 1]);
+                    if (y > 0 && labels[idx - croppedCanvas.width] > 0) neighbors.push(labels[idx - croppedCanvas.width]);
+                    
+                    if (neighbors.length === 0) {
+                        labels[idx] = nextLabel++;
+                    } else {
+                        const minLabel = Math.min(...neighbors);
+                        labels[idx] = minLabel;
+                        
+                        // Record equivalences
+                        for (const n of neighbors) {
+                            if (n !== minLabel) {
+                                if (!equivalences.has(n)) equivalences.set(n, n);
+                                equivalences.set(n, Math.min(equivalences.get(n), minLabel));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Resolve equivalences
+            const resolved = new Map();
+            for (let label = 1; label < nextLabel; label++) {
+                let root = label;
+                while (equivalences.has(root) && equivalences.get(root) !== root) {
+                    root = equivalences.get(root);
+                }
+                resolved.set(label, root);
+            }
+            
+            // Second pass - apply resolved labels and count component sizes
+            const componentSizes = new Map();
+            const componentBounds = new Map();
+            
+            for (let y = 0; y < croppedCanvas.height; y++) {
+                for (let x = 0; x < croppedCanvas.width; x++) {
+                    const idx = y * croppedCanvas.width + x;
+                    if (labels[idx] === 0) continue;
+                    
+                    const finalLabel = resolved.get(labels[idx]) || labels[idx];
+                    labels[idx] = finalLabel;
+                    
+                    componentSizes.set(finalLabel, (componentSizes.get(finalLabel) || 0) + 1);
+                    
+                    if (!componentBounds.has(finalLabel)) {
+                        componentBounds.set(finalLabel, {
+                            minX: x, maxX: x, minY: y, maxY: y
+                        });
+                    } else {
+                        const bounds = componentBounds.get(finalLabel);
+                        bounds.minX = Math.min(bounds.minX, x);
+                        bounds.maxX = Math.max(bounds.maxX, x);
+                        bounds.minY = Math.min(bounds.minY, y);
+                        bounds.maxY = Math.max(bounds.maxY, y);
+                    }
+                }
+            }
+            
+            // Find largest component that's not too small or too large
+            let bestComponent = 0;
+            let bestSize = 0;
+            const minComponentSize = 20; // Minimum pixels for valid digit
+            const maxComponentRatio = 0.7; // Maximum ratio of component to cell size
+            
+            for (const [label, size] of componentSizes) {
+                const bounds = componentBounds.get(label);
+                const componentW = bounds.maxX - bounds.minX + 1;
+                const componentH = bounds.maxY - bounds.minY + 1;
+                const sizeRatio = size / (croppedCanvas.width * croppedCanvas.height);
+                
+                if (size > minComponentSize && 
+                    sizeRatio < maxComponentRatio &&
+                    componentW > 3 && componentH > 3 &&
+                    size > bestSize) {
+                    bestComponent = label;
+                    bestSize = size;
+                }
+            }
+            
+            // Extract bounds of best component
+            let minX = croppedCanvas.width, maxX = 0;
+            let minY = croppedCanvas.height, maxY = 0;
+            let digitFound = false;
+            
+            if (bestComponent > 0) {
+                const bounds = componentBounds.get(bestComponent);
+                minX = bounds.minX;
+                maxX = bounds.maxX;
+                minY = bounds.minY;
+                maxY = bounds.maxY;
+                digitFound = true;
+            }
+            
+            // Create final 28x28 canvas
+            const cellCanvas = document.createElement('canvas');
+            cellCanvas.width = 28;
+            cellCanvas.height = 28;
+            const cellCtx = cellCanvas.getContext('2d');
+            
+            // Fill with white
+            cellCtx.fillStyle = 'white';
+            cellCtx.fillRect(0, 0, 28, 28);
+            
+            // Empty cell if no digit found
+            if (!digitFound || (maxX - minX) < 3 || (maxY - minY) < 3) {
+                cellDiv.appendChild(cellCanvas);
+                return 0;
+            }
+            
+            // Calculate digit dimensions
+            const digitWidth = maxX - minX + 1;
+            const digitHeight = maxY - minY + 1;
+            
+            // Calculate scaling to fit in 20x20 area (leaving 4px padding on each side)
+            const targetSize = 20;
+            const scale = Math.min(targetSize / digitWidth, targetSize / digitHeight) * 0.9;
+            
+            const scaledWidth = digitWidth * scale;
+            const scaledHeight = digitHeight * scale;
+            
+            // Center in 28x28
+            const offsetX = (28 - scaledWidth) / 2;
+            const offsetY = (28 - scaledHeight) / 2;
+            
+            // Draw only the digit component
+            cellCtx.drawImage(croppedCanvas, 
+                            minX, minY, digitWidth, digitHeight,
+                            offsetX, offsetY, scaledWidth, scaledHeight);
+            
+            // Process for MNIST
+            const imageData = cellCtx.getImageData(0, 0, 28, 28);
+            
+            // Apply binarization and invert for MNIST
+            let blackPixels = 0;
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const gray = imageData.data[i] * 0.299 + 
+                           imageData.data[i + 1] * 0.587 + 
+                           imageData.data[i + 2] * 0.114;
+                
+                // Use adaptive threshold
+                const binary = gray < (threshold * 1.2) ? 0 : 255;
+                
+                // Invert for MNIST (white on black)
+                const inverted = 255 - binary;
+                imageData.data[i] = imageData.data[i + 1] = imageData.data[i + 2] = inverted;
+                
+                if (inverted > 128) blackPixels++;
+            }
+            
+            cellCtx.putImageData(imageData, 0, 0);
+            cellDiv.appendChild(cellCanvas);
+            
+            // Final check for empty cells
+            if (blackPixels < 20) {
+                return 0;
+            }
+            
+            // Prepare tensor
+            const input = new Float32Array(28 * 28);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                input[i / 4] = imageData.data[i] / 255.0;
+            }
+            
+            const tensor = new ort.Tensor('float32', input, [1, 1, 28, 28]);
+            
+            // Run inference
+            try {
+                const feeds = {};
+                feeds[session.inputNames[0]] = tensor;
+                const results = await session.run(feeds);
+                const scores = results[session.outputNames[0]].data;
+                
+                // Find best digit with softmax
+                let maxScore = -Infinity;
+                let predictedDigit = 0;
+                
+                for (let i = 0; i < scores.length; i++) {
+                    if (scores[i] > maxScore) {
+                        maxScore = scores[i];
+                        predictedDigit = i;
+                    }
+                }
+                
+                // Calculate confidence
+                const expScores = scores.map(s => Math.exp(s));
+                const sumExp = expScores.reduce((a, b) => a + b, 0);
+                const confidence = expScores[predictedDigit] / sumExp;
+                
+                // Add label if digit detected with good confidence
+                if (predictedDigit > 0 && confidence > 0.5) {
+                    const label = document.createElement('div');
+                    label.className = 'digit-label';
+                    label.textContent = predictedDigit;
+                    cellDiv.appendChild(label);
+                    console.log(`Recognized ${predictedDigit} (conf: ${confidence.toFixed(3)}, threshold: ${threshold})`);
+                    return predictedDigit;
+                }
+                
+                return 0;
+            } catch (e) {
+                console.error('Inference error:', e);
+                return 0;
+            }
+        }
+        
+        function displayResult(grid) {
+            // Create string representation
+            const sudokuString = grid.flat().map(d => d || '0').join('');
+            document.getElementById('resultString').textContent = sudokuString;
+            
+            document.getElementById('result').style.display = 'block';
+        }
+        
+        function copyResult() {
+            const text = document.getElementById('resultString').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            });
+        }
+        
+        // Initialize on load
+        initModel();
+    </script>
+</body>
+</html>

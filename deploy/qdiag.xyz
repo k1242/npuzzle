@@ -26,6 +26,12 @@ server {
     location = /sudoku  { return 301 /sudoku/; }
     location /sudoku/   { try_files $uri $uri/ =404; }
 
+    location = /dino  { return 301 /dino/; }
+    location /dino/   { try_files $uri $uri/ =404; }
+
+    location = /qris  { return 301 /qris/; }
+    location /qris/   { try_files $uri $uri/ =404; }
+
     # --- backend ---
     location /api/ {
         proxy_pass         http://127.0.0.1:5000/;
@@ -33,6 +39,36 @@ server {
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    # --- Sudoku multiplayer backend ---
+    location /sudoku-api/ {
+        proxy_pass         http://127.0.0.1:3000/;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        
+        # Session support
+        proxy_set_header   Cookie            $http_cookie;
+        proxy_pass_header  Set-Cookie;
+        proxy_cookie_path  /                 /;
+    }
+
+    # Socket.io specific location
+    location /socket.io/ {
+        proxy_pass         http://127.0.0.1:3000/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        "upgrade";
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        
+        # Socket.io specific
+        proxy_buffering    off;
+        proxy_read_timeout 86400;
     }
 }
 

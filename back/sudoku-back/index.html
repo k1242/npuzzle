@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sudoku Socket.io Tester</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+    }
+    
+    .section h3 {
+      margin-top: 0;
+      color: #555;
+    }
+    
+    .status {
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    button {
+      background: #6c63ff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #5a52d5;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-left: 3px solid transparent;
+    }
+    
+    .log-entry.sent {
+      border-left-color: #007bff;
+      background: #e7f1ff;
+    }
+    
+    .log-entry.received {
+      border-left-color: #28a745;
+      background: #e6f4ea;
+    }
+    
+    .log-entry.error {
+      border-left-color: #dc3545;
+      background: #ffeaea;
+    }
+    
+    .room-info {
+      background: #f0f0ff;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+    
+    .test-board {
+      display: inline-block;
+      margin-top: 10px;
+      background: #ddd;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    
+    .test-row {
+      display: flex;
+    }
+    
+    .test-cell {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 1px solid #bbb;
+      text-align: center;
+      line-height: 28px;
+      cursor: pointer;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 1px;
+      color: #4a5568;
+    }
+    
+    .test-cell:hover {
+      background: #f0f0ff;
+    }
+    
+    .test-cell.fixed {
+      background: #f5f5f5;
+      color: #2c2c2c;
+      font-weight: 700;
+    }
+    
+    .test-cell[data-col="2"],
+    .test-cell[data-col="5"] {
+      margin-right: 3px;
+    }
+    
+    .test-row[data-row="2"],
+    .test-row[data-row="5"] {
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Sudoku Multiplayer Socket.io Tester</h1>
+    
+    <div id="status" class="status disconnected">Disconnected</div>
+    
+    <div class="section">
+      <h3>Connection</h3>
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+    
+    <div class="section">
+      <h3>Room Management</h3>
+      <button id="createRoomBtn" disabled>Create Room</button>
+      <br>
+      <input id="roomCodeInput" type="text" placeholder="Room code (6 digits)" maxlength="6">
+      <button id="joinRoomBtn" disabled>Join Room</button>
+      <button id="leaveRoomBtn" disabled>Leave Room</button>
+      
+      <div id="roomInfo" class="room-info" style="display: none;">
+        <strong>Current Room:</strong> <span id="currentRoom">-</span><br>
+        <strong>Players:</strong> <span id="playerCount">0</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h3>Game Updates</h3>
+      <p>Click cells to toggle value (0-9) and send update:</p>
+      <div class="test-board" id="testBoard"></div>
+      <br>
+      <button id="sendBoardBtn" disabled>Send Board Update</button>
+      <button id="sendMarkerBtn" disabled>Toggle Markers</button>
+      <button id="sendUndoBtn" disabled>Send Undo</button>
+    </div>
+    
+    <div class="section">
+      <h3>Event Log</h3>
+      <div id="log" class="log"></div>
+      <button id="clearLogBtn">Clear Log</button>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let currentRoom = null;
+    let testBoard = createTestGameState();
+    let markers = [];
+    
+    // Create test game state
+    function createTestGameState() {
+      const board = Array(9).fill(null).map(() => Array(9).fill(0));
+      const pencilMarks = Array(9).fill(null).map(() => 
+        Array(9).fill(null).map(() => [])
+      );
+      
+      // Add some test data (simple sudoku pattern)
+      board[0][0] = 5;
+      board[0][1] = 3;
+      board[0][4] = 7;
+      board[1][0] = 6;
+      board[1][3] = 1;
+      board[1][4] = 9;
+      board[1][5] = 5;
+      board[2][1] = 9;
+      board[2][2] = 8;
+      board[2][7] = 6;
+      board[3][0] = 8;
+      board[3][4] = 6;
+      board[3][8] = 3;
+      board[4][0] = 4;
+      board[4][3] = 8;
+      board[4][5] = 3;
+      board[4][8] = 1;
+      board[5][0] = 7;
+      board[5][4] = 2;
+      board[5][8] = 6;
+      board[6][1] = 6;
+      board[6][6] = 2;
+      board[6][7] = 8;
+      board[7][3] = 4;
+      board[7][4] = 1;
+      board[7][5] = 9;
+      board[7][8] = 5;
+      board[8][4] = 8;
+      board[8][7] = 7;
+      board[8][8] = 9;
+      
+      return {
+        board,
+        pencilMarks,
+        markedCells: [],
+        initialBoard: board.map(row => [...row]),
+        currentPuzzleIndex: -1,
+        prefillNotes: false,
+        autoClearNotes: false,
+        multicolorBrush: false
+      };
+    }
+    
+    // UI Elements
+    const statusEl = document.getElementById('status');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+    const roomCodeInput = document.getElementById('roomCodeInput');
+    const roomInfo = document.getElementById('roomInfo');
+    const currentRoomEl = document.getElementById('currentRoom');
+    const playerCountEl = document.getElementById('playerCount');
+    const sendBoardBtn = document.getElementById('sendBoardBtn');
+    const sendMarkerBtn = document.getElementById('sendMarkerBtn');
+    const sendUndoBtn = document.getElementById('sendUndoBtn');
+    const logEl = document.getElementById('log');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    
+    // Create 9x9 board
+    function createBoard() {
+      const boardEl = document.getElementById('testBoard');
+      boardEl.innerHTML = '';
+      
+      for (let r = 0; r < 9; r++) {
+        const row = document.createElement('div');
+        row.className = 'test-row';
+        row.dataset.row = r;
+        
+        for (let c = 0; c < 9; c++) {
+          const cell = document.createElement('span');
+          cell.className = 'test-cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.textContent = '0';
+          
+          // Cell click handler
+          cell.onclick = () => {
+            const currentValue = parseInt(cell.textContent);
+            const newValue = (currentValue + 1) % 10;
+            cell.textContent = newValue;
+            
+            // Send cell update
+            if (currentRoom && socket) {
+              const update = {
+                type: 'cell',
+                data: { row: r, col: c, value: newValue }
+              };
+              
+              log(`Sending cell update: [${r},${c}] = ${newValue}`, 'sent');
+              socket.emit('game-update', { roomCode: currentRoom, update });
+            }
+          };
+          
+          row.appendChild(cell);
+        }
+        
+        boardEl.appendChild(row);
+      }
+    }
+    
+    // Initialize board
+    createBoard();
+    
+    // Display initial test data
+    testBoard.board.forEach((row, r) => {
+      row.forEach((value, c) => {
+        const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+        if (cell) {
+          if (value !== 0) {
+            cell.textContent = value;
+            cell.classList.add('fixed');
+          }
+        }
+      });
+    });
+    
+    // Logging
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    
+    // Update UI state
+    function updateUI(connected, inRoom) {
+      connectBtn.disabled = connected;
+      disconnectBtn.disabled = !connected;
+      createRoomBtn.disabled = !connected || inRoom;
+      joinRoomBtn.disabled = !connected || inRoom;
+      leaveRoomBtn.disabled = !connected || !inRoom;
+      sendBoardBtn.disabled = !connected || !inRoom;
+      sendMarkerBtn.disabled = !connected || !inRoom;
+      sendUndoBtn.disabled = !connected || !inRoom;
+      
+      if (connected) {
+        statusEl.className = 'status connected';
+        statusEl.textContent = 'Connected';
+      } else {
+        statusEl.className = 'status disconnected';
+        statusEl.textContent = 'Disconnected';
+      }
+      
+      roomInfo.style.display = inRoom ? 'block' : 'none';
+    }
+    
+    // Connect to server
+    connectBtn.onclick = () => {
+      socket = io('http://localhost:3000');
+      if (!testBoard) {
+        testBoard = createTestGameState();
+      }
+      
+      socket.on('connect', () => {
+        log('Connected to server', 'received');
+        updateUI(true, false);
+      });
+      
+      socket.on('disconnect', () => {
+        log('Disconnected from server', 'error');
+        currentRoom = null;
+        updateUI(false, false);
+      });
+      
+      socket.on('player-count', (count) => {
+        log(`Player count update: ${count}`, 'received');
+        playerCountEl.textContent = count;
+      });
+      
+      socket.on('game-update', (update) => {
+        log(`Game update received: ${JSON.stringify(update)}`, 'received');
+        
+        // Update test board based on update
+        if (update.type === 'cell' && update.data) {
+          const { row, col, value } = update.data;
+          const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+          if (cell) {
+            cell.textContent = value;
+          }
+        } else if (update.type === 'board' && update.data) {
+          // Update entire board
+          update.data.board.forEach((row, r) => {
+            row.forEach((value, c) => {
+              const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+              if (cell) {
+                cell.textContent = value;
+              }
+            });
+          });
+        } else if (update.type === 'undo' && update.data) {
+          // Clear board on undo
+          document.querySelectorAll('.test-cell').forEach(cell => cell.textContent = '0');
+        }
+      });
+      
+      socket.on('error', (error) => {
+        log(`Error: ${error}`, 'error');
+      });
+    };
+    
+    // Disconnect
+    disconnectBtn.onclick = () => {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    };
+    
+    // Create room
+    createRoomBtn.onclick = () => {
+      log('Creating room...', 'sent');
+      
+      socket.emit('create-room', testBoard, (response) => {
+        if (response.success) {
+          currentRoom = response.roomCode;
+          currentRoomEl.textContent = currentRoom;
+          log(`Room created: ${currentRoom}`, 'received');
+          updateUI(true, true);
+          
+          // Update visual board with test data
+          testBoard.board.forEach((row, r) => {
+            row.forEach((value, c) => {
+              const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+              if (cell && value !== 0) {
+                cell.textContent = value;
+              }
+            });
+          });
+        } else {
+          log(`Failed to create room: ${response.error}`, 'error');
+        }
+      });
+    };
+    
+    // Join room
+    joinRoomBtn.onclick = () => {
+      const roomCode = roomCodeInput.value;
+      if (roomCode.length !== 6) {
+        log('Room code must be 6 digits', 'error');
+        return;
+      }
+      
+      log(`Joining room ${roomCode}...`, 'sent');
+      
+      socket.emit('join-room', roomCode, (response) => {
+        if (response.success) {
+          currentRoom = roomCode;
+          currentRoomEl.textContent = currentRoom;
+          log(`Joined room: ${roomCode}`, 'received');
+          log(`Game state: ${JSON.stringify(response.gameState).substring(0, 100)}...`, 'received');
+          updateUI(true, true);
+          
+          // Update test board with received state
+          testBoard = response.gameState;
+          
+          // Update visual board
+          testBoard.board.forEach((row, r) => {
+            row.forEach((value, c) => {
+              const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+              if (cell) {
+                cell.textContent = value;
+              }
+            });
+          });
+        } else {
+          log(`Failed to join room: ${response.error}`, 'error');
+        }
+      });
+    };
+    
+    // Leave room
+    leaveRoomBtn.onclick = () => {
+      log(`Leaving room ${currentRoom}...`, 'sent');
+      
+      socket.emit('leave-room', currentRoom, (response) => {
+        if (response.success) {
+          log('Left room', 'received');
+          currentRoom = null;
+          currentRoomEl.textContent = '-';
+          playerCountEl.textContent = '0';
+          updateUI(true, false);
+        } else {
+          log(`Failed to leave room: ${response.error}`, 'error');
+        }
+      });
+    };
+    
+    // Send board update
+    sendBoardBtn.onclick = () => {
+      const board = Array(9).fill(null).map(() => Array(9).fill(0));
+      
+      // Copy test cells to board
+      document.querySelectorAll('.test-cell').forEach(cell => {
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+        board[row][col] = parseInt(cell.textContent);
+      });
+      
+      const update = {
+        type: 'board',
+        data: { board }
+      };
+      
+      log('Sending board update', 'sent');
+      socket.emit('game-update', { roomCode: currentRoom, update });
+    };
+    
+    // Toggle markers
+    sendMarkerBtn.onclick = () => {
+      markers = markers.length > 0 ? [] : [['0,0', 1], ['1,1', 2], ['2,2', 1], ['4,4', 2]];
+      
+      const update = {
+        type: 'markedCells',
+        data: { markedCells: markers }
+      };
+      
+      log(`Sending markers update: ${JSON.stringify(markers)}`, 'sent');
+      socket.emit('game-update', { roomCode: currentRoom, update });
+    };
+    
+    // Send undo
+    sendUndoBtn.onclick = () => {
+      const board = Array(9).fill(null).map(() => Array(9).fill(0));
+      const pencilMarks = Array(9).fill(null).map(() => 
+        Array(9).fill(null).map(() => [])
+      );
+      
+      const update = {
+        type: 'undo',
+        data: { board, pencilMarks, markedCells: [] }
+      };
+      
+      log('Sending undo update', 'sent');
+      socket.emit('game-update', { roomCode: currentRoom, update });
+      
+      // Clear test board
+      document.querySelectorAll('.test-cell').forEach(cell => cell.textContent = '0');
+    };
+    
+    // Clear log
+    clearLogBtn.onclick = () => {
+      logEl.innerHTML = '';
+    };
+    
+    // Initial state
+    updateUI(false, false);
+  </script>
+</body>
+</html>

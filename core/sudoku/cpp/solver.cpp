@@ -2,11 +2,11 @@
 #include <iostream>
 #include <algorithm>
 
-const char* SudokuSolver::tech_names[21] = {"", 
+const char* SudokuSolver::tech_names[26] = {"", 
     "Basic Elimination", "Naked Single", "Hidden Single",
     "Naked Pair", "Hidden Pair", "Naked Triple", "Hidden Triple", "Naked Quad", "Hidden Quad", "Pointing Pairs", "Box-Line Reduction",
     "X-Wing", "Chute Remote Pairs", "Swordfish", "Y-Wing", "Rectangle Elimination", "XYZ-Wing", 
-    "Jellyfish", "Simple Coloring", "X-Cycles"
+    "Jellyfish", "Simple Coloring", "X-Cycles", "Single Coloring", "X-Chain", "XY-Chain", "Discontinuous Nice Loop", "Continuous Nice Loop"
 };
 
 SudokuSolver::SudokuSolver(const std::string& input) : grid(9, std::vector<int>(9)), 
@@ -42,12 +42,16 @@ void SudokuSolver::solve() {
                   || findNakedSets(2, NAKED_PAIR)
                   || findHiddenPairs()
                   || findNakedSets(3, NAKED_TRIPLE)
-                  || findNakedSets(4, NAKED_QUAD) 
                   || findIntersectionRemoval()
                   || findXWing()
+                  // || findXChain()
                   || findYWing()
-                  || findRectangleElimination()
+                  || findXYChain()
                   || findXYZWing()
+                  || findSingleColoring()
+                  || findNakedSets(4, NAKED_QUAD) 
+                  // || findNiceLoops()
+                  // || findRectangleElimination()
                   // || findChuteRemotePairs() // not working ?
                   // || findSwordfish()
                   // || findJellyfish()

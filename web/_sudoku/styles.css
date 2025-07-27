@@ -15,6 +15,7 @@
   --cell-conflict: #ffe5e5;
   --cell-affected: #f0f1ff;
   --cell-marked: #ffe1cc;
+  --cell-marked2: #cde4cd;
   --text-fixed: #2c2c2c;
   --text-user: #4a5568;
   --text-pencil: #9ca3af;
@@ -93,6 +94,157 @@ body {
   }
 }
 
+/* ====== NEW GAME BUTTON WITH DIFFICULTY ====== */
+.new-game-wrapper {
+  position: relative;
+}
+
+.btn-with-indicator {
+  display: flex !important;
+  align-items: center;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.btn-text {
+  padding: 10px 16px;
+  flex: 1;
+}
+
+.btn-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.3);
+  margin: 0;
+}
+
+.btn-indicator {
+  padding: 10px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  position: relative;
+  width: 42px;
+  text-align: center;
+  font-family: monospace;
+}
+
+.btn-indicator:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Difficulty dropdown */
+.difficulty-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 100;
+  min-width: 260px;
+}
+
+.difficulty-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.slider-group {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.slider-group label {
+  font-weight: 600;
+  min-width: 70px;
+  font-size: 0.95rem;
+}
+
+.slider-group input[type="range"] {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e0e0e0;
+  border-radius: 3px;
+  outline: none;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(108, 99, 255, 0.4);
+}
+
+.slider-group input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.slider-group input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(108, 99, 255, 0.4);
+}
+
+.difficulty-display {
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 8px;
+  font-size: 1.05rem;
+}
+
+@media (max-width: 600px) {
+  .btn-text {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .btn-indicator {
+    padding: 10px 10px;
+    font-size: 0.9rem;
+    width: 38px;
+  }
+  
+  .difficulty-dropdown {
+    min-width: 240px;
+    padding: 16px;
+  }
+  
+  .slider-group label {
+    min-width: 60px;
+    font-size: 0.9rem;
+  }
+  
+  .difficulty-display {
+    font-size: 0.95rem;
+  }
+}
+
 /* ====== CONTROLS ====== */
 .controls {
   display: flex;
@@ -155,10 +307,10 @@ body.marker-mode #board .cell {
   cursor: crosshair;
 }
 
-/* Disable touch actions in marker mode for proper dragging */
+/* Prevent unwanted touch behaviors in marker mode */
 body.marker-mode #board {
-  touch-action: none;
   -webkit-touch-callout: none;
+  -webkit-user-select: none;
 }
 
 .tool-btn.disabled {
@@ -223,6 +375,9 @@ body.marker-mode #board {
   color: var(--text-user);
   transition: all 0.15s ease;
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   -webkit-tap-highlight-color: transparent;
   width: var(--cell-size);
   height: var(--cell-size);
@@ -307,6 +462,38 @@ body.marker-mode #board {
 
 .cell.marked {
   background: var(--cell-marked) !important;
+  color: #1a1a1a !important;
+}
+
+.cell.marked2 {
+  background: var(--cell-marked2) !important;
+  color: #1a1a1a !important;
+}
+
+/* Keep highlight color for cells with same number when highlight is active */
+.cell.marked.highlight-same,
+.cell.marked2.highlight-same {
+  color: var(--text-user) !important;
+}
+
+/* Keep conflict color - highest priority */
+.cell.marked.conflict,
+.cell.marked2.conflict {
+  background: var(--cell-conflict) !important;
+  color: var(--text-conflict) !important;
+}
+
+/* Fixed cells in marked state should keep their bold black */
+.cell.fixed.marked,
+.cell.fixed.marked2 {
+  color: var(--text-fixed) !important;
+  font-weight: 700;
+}
+
+/* Keep normal color for selected marked cells */
+.cell.marked.selected,
+.cell.marked2.selected {
+  color: var(--text-user) !important;
 }
 
 .cell.conflict {
@@ -344,6 +531,13 @@ body.marker-mode #board {
   transition: all 0.15s ease;
 }
 
+/* Pencil marks in marked cells - more contrast */
+.cell.marked .pencil-mark,
+.cell.marked2 .pencil-mark {
+  color: #666;
+  font-weight: 700;
+}
+
 .pencil-mark.highlight {
   background: var(--cell-same);
   color: var(--accent);
@@ -356,6 +550,12 @@ body.marker-mode #board {
   background: #ffe0cc;
   color: #ff7a3d;
   box-shadow: 0 0 0 1px rgba(255, 149, 99, 0.3);
+}
+
+.cell.marked2 .pencil-mark.highlight {
+  background: #a3d1a3;
+  color: #2a6b2a;
+  box-shadow: 0 0 0 1px rgba(42, 107, 42, 0.3);
 }
 
 @media (max-width: 600px) {
@@ -495,7 +695,8 @@ body.marker-mode #board {
   flex: 1;
 }
 
-#copyCodeBtn.copied {
+#copyCodeBtn.copied,
+#loadCodeBtn.copied {
   background: var(--accent);
   color: #fff;
 }
@@ -558,6 +759,14 @@ body.marker-mode #board {
   color: #666;
 }
 
+.helpBox code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
 .helpBox button {
   margin-top: 20px;
   width: 100%;
@@ -604,6 +813,23 @@ body.marker-mode #board {
 
 .settings-section .setting:last-child {
   margin-bottom: 0;
+}
+
+/* ====== MULTIPLAYER SECTION ====== */
+.multiplayer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Reduced from default */
+}
+
+.multiplayer-controls .section-label {
+  margin-bottom: 4px; /* Small gap between label and buttons */
+  font-weight: 600;
+}
+
+.multiplayer-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 /* ====== ANIMATIONS ====== */

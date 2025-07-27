@@ -1,2 +1,4 @@
 
 tmp/
+"node_modules/" 
+"back/sudoku-back/node_modules/" 
