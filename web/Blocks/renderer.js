@@ -12,7 +12,6 @@ export class Renderer {
     this.nextQueueEl = elements.nextQueue;
     this.holdPreviewEl = elements.holdPreview;
     this.pausedOverlayEl = elements.pausedOverlay;
-    this.gameOverTextEl = elements.gameOverText;
     this.appEl = elements.app;
     
     // Mobile elements
@@ -89,6 +88,12 @@ export class Renderer {
         }
       }
       
+      // Ensure game over text stays in game container on desktop
+      const gameOverText = document.querySelector('#gameOverText');
+      if (gameOverText && gameContainer && gameOverText.parentElement !== gameContainer) {
+        gameContainer.appendChild(gameOverText);
+      }
+      
       // Ensure correct desktop order in app
       if (leftPanel && leftPanel.parentElement !== app) {
         app.appendChild(leftPanel);
@@ -145,6 +150,9 @@ export class Renderer {
       
       gameWrapper.appendChild(newScoreBox);
       gameWrapper.appendChild(gameArea);
+      
+      // Don't move game over text - keep it in game container
+      // This allows proper positioning relative to viewport
       
       app.appendChild(gameWrapper);
       

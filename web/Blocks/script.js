@@ -79,7 +79,6 @@ const initGame = () => {
     nextQueue: $('#nextQueue'),
     holdPreview: $('#holdPreview'),
     pausedOverlay: $('#pausedOverlay'),
-    gameOverText: $('#gameOverText'),
     app: $('#app')
   });
   

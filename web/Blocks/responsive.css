@@ -5,6 +5,15 @@
   :root {
     --game-scale: 0.85;
   }
+  
+  /* Allow interaction with header elements */
+  .header,
+  .header * {
+    touch-action: auto;
+    -webkit-touch-callout: auto;
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
 }
 
 @media (max-width: 600px) {
@@ -25,7 +34,7 @@
     --cell-size: 28px;
     --mobile-board-width: calc(10 * var(--cell-size));
     --mobile-board-height: calc(18 * var(--cell-size));
-    --mobile-side-width: 120px;
+    --mobile-side-width: 100px;
   }
 }
 
@@ -33,12 +42,20 @@
 @media (max-width: 400px) {
   :root {
     --cell-size: 22px;
-    --mobile-side-width: 85px;
+    --mobile-side-width: 75px;
   }
 }
 
 /* Mobile layout overhaul */
 @media (max-width: 768px) {
+  /* Prevent scroll and bounce on iOS */
+  body {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
   #app {
     gap: 0;
     transform: none;
@@ -50,7 +67,9 @@
     justify-content: center;
     align-items: center;
     height: calc(100vh - var(--headerH) - 40px);
-    max-height: unset;
+    max-height: calc(100vh - var(--headerH) - 40px);
+    position: relative;
+    overflow: hidden; /* Prevent scrolling */
   }
   
   /* Mobile game wrapper - centers content vertically */
@@ -62,13 +81,16 @@
     gap: 12px;
     margin: auto 0;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center top; /* Keep top edge fixed during scaling */
+    width: 100%;
+    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 32px);
   }
   
   /* Mobile score box above the game */
   .mobile-score-box {
     order: 1;
-    width: 100%;
-    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 32px);
+    /* Remove width: 100% to prevent overflow */
+    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 16px);
     padding: 12px 16px !important;
     display: flex;
     flex-direction: row;
@@ -76,7 +98,7 @@
     justify-content: space-between;
     gap: 16px;
     border-radius: 12px;
-    margin: 0 16px;
+    /* Remove margin to prevent additional width */
   }
   
   .mobile-score-box .score-section {
@@ -113,18 +135,19 @@
     order: 2;
     display: flex;
     flex-direction: row;
-    gap: 16px;
+    gap: 12px;
     align-items: flex-end;
     width: 100%;
     justify-content: center;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow: hidden; /* Prevent horizontal scrolling */
   }
   
   .game-container {
     order: 2;
     margin: 0;
     flex-shrink: 0;
+    touch-action: manipulation; /* Allow touch for game controls */
   }
   
   .side-panel.left {
@@ -147,7 +170,7 @@
   .side-panel.left .info-box {
     min-width: unset;
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     margin-bottom: 0;
     flex: none;
   }
@@ -178,7 +201,8 @@
   }
   
   #app.game-over .mobile-game-wrapper {
-    transform: scale(0.95);
+    transform: scale(0.85);
+    transform-origin: center top;
   }
   
   /* Mobile board adjustments */
@@ -197,21 +221,21 @@
     font-size: 0.8rem;
   }
   
-  /* Smaller preview pieces on mobile */
+  /* Larger preview pieces on mobile */
   .preview-piece {
-    grid-template-columns: repeat(4, 10px);
-    grid-template-rows: repeat(3, 10px);
+    grid-template-columns: repeat(4, 14px);
+    grid-template-rows: repeat(3, 14px);
     gap: 0;
   }
   
   .preview-cell {
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
   }
   
   .empty-hold {
-    width: 40px;
-    height: 30px;
+    width: 56px;
+    height: 42px;
   }
   
   /* Footer positioning on mobile */
@@ -226,22 +250,48 @@
     z-index: 10;
   }
   
-  /* Mobile game over text */
+  /* Mobile game over text - position in center of viewport */
   .game-over-text {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    bottom: auto !important;
     font-size: 2.5rem;
+    z-index: 20;
+  }
+  
+  /* Ensure game over text is visible when game is over */
+  #app.game-over .game-over-text {
+    /* Keep the same position and transform */
+    transform: translate(-50%, -50%) !important;
   }
   
   /* Mobile help modal */
+  .help-modal {
+    touch-action: auto;
+  }
+  
   .help-content {
     margin: 20px;
     padding: 24px;
     max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  
+  /* Settings panel on mobile */
+  #panel {
+    touch-action: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .help-content h2 {
     font-size: 1.5rem;
   }
-}
+} /* End of @media (max-width: 768px) */
 
 /* Very narrow screens adjustments */
 @media (max-width: 400px) {
@@ -249,6 +299,7 @@
     gap: 0;
     padding: 0;
     height: calc(100vh - var(--headerH) - 35px);
+    max-height: calc(100vh - var(--headerH) - 35px);
   }
   
   .mobile-game-wrapper {
@@ -257,11 +308,10 @@
   
   .mobile-score-box {
     padding: 8px 12px !important;
-    width: 100%;
-    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 16px);
+    /* Adjust max-width for very narrow screens */
+    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 8px);
     gap: 12px;
     border-radius: 8px;
-    margin: 0 8px;
   }
   
   .mobile-score-box h3 {
@@ -282,7 +332,7 @@
     gap: 8px;
     flex-direction: row;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow: hidden;
   }
   
   .board-wrap {
@@ -315,29 +365,29 @@
     line-height: 1.4;
   }
   
-  /* Even smaller preview pieces */
+  /* Reasonably sized preview pieces on narrow screens */
   .preview-piece {
-    grid-template-columns: repeat(4, 8px);
-    grid-template-rows: repeat(3, 8px);
+    grid-template-columns: repeat(4, 11px);
+    grid-template-rows: repeat(3, 11px);
   }
   
   .preview-cell {
-    width: 8px;
-    height: 8px;
+    width: 11px;
+    height: 11px;
   }
   
   .empty-hold {
-    width: 32px;
-    height: 24px;
+    width: 44px;
+    height: 33px;
     border-width: 1px;
   }
   
   .next-queue {
-    gap: 8px;
+    gap: 6px;
   }
   
   .hold-preview {
-    gap: 8px;
+    gap: 6px;
   }
   
   /* Footer on very narrow screens */
@@ -364,6 +414,9 @@
     margin: 10px;
     padding: 20px;
     max-height: calc(100vh - 20px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
   
   .help-content h2 {
@@ -380,4 +433,4 @@
   .help-content ul {
     font-size: 0.9rem;
   }
-}
+} /* End of @media (max-width: 400px) */

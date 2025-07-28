@@ -28,19 +28,26 @@
   transform-origin: center top;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
-/* Game over state */
+/* Game over state - 85% scaling */
 #app.game-over {
-  transform: scale(var(--game-scale)) scale(0.95);
+  transform: scale(calc(var(--game-scale) * 0.85));
 }
 
 #app.game-over .board-wrap {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
-#app.game-over .side-panel {
-  opacity: 0.4;
+/* Hold and Next boxes become transparent */
+#app.game-over .side-panel .info-box.piece-box {
+  opacity: 0.3;
+}
+
+/* Keep score box fully visible */
+#app.game-over .side-panel .info-box:not(.piece-box) {
+  opacity: 1;
 }
 
 #app.game-over .mobile-score-box {
@@ -108,12 +115,12 @@
   line-height: 1.6;
 }
 
-/* Game Over - always animated */
+/* Game Over text - desktop positioning */
 .game-over-text {
   position: absolute;
-  top: 50%;
+  bottom: -65px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   font-size: 3rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -121,16 +128,18 @@
   letter-spacing: 2px;
   white-space: nowrap;
   opacity: 0;
-  display: none;
   z-index: 10;
 }
 
-#app.game-over .game-container .game-over-text {
-  display: block !important;
-  animation: gameOverFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards !important;
+/* Show game over text */
+#app.game-over .game-over-text {
+  animation: gameOverFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
 }
 
 @keyframes gameOverFadeIn {
+  from {
+    opacity: 0;
+  }
   to {
     opacity: 1;
   }
@@ -199,4 +208,9 @@ body.no-animations .cell.clearing {
 /* Mouse control cursor */
 body.mouse-control-enabled .board-wrap {
   cursor: crosshair;
+}
+
+/* Mobile-specific score box (added for proper width control) */
+.mobile-score-box {
+  width: auto !important; /* Prevent width: 100% inheritance */
 }

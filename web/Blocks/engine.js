@@ -284,8 +284,6 @@ export class GameEngine {
       dropDist++;
     }
     
-    console.log('Hard drop:', dropDist, 'animations:', this.animationsEnabled); // DEBUG
-    
     if (dropDist > 0 && this.animationsEnabled) {
       // Animate the fall
       const dropSpeed = Math.max(3, 50 / dropDist);
@@ -514,7 +512,6 @@ export class GameEngine {
     if (this.gameOver) return;
     
     this.paused = !this.paused;
-    console.log('Toggle pause:', this.paused, 'callback:', !!this.onPauseToggle); // DEBUG
     
     if (this.paused) {
       if (this.dropTimer) {

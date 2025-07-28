@@ -139,3 +139,9 @@
   font-size: 1.2rem;
   font-weight: 600;
 }
+
+/* Mobile score box specific styling */
+.mobile-score-box {
+  width: auto !important;
+  box-sizing: border-box;
+}
