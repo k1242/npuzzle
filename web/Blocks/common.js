@@ -6,6 +6,7 @@ const initHamburgerMenu = () => {
   const panel = document.querySelector('#panel');
   
   if (menuBtn && panel) {
+    // Default behavior - can be overridden in game-specific scripts
     menuBtn.onclick = () => {
       panel.classList.toggle('open');
       menuBtn.classList.toggle('active');

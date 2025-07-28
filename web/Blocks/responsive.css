@@ -1,0 +1,383 @@
+/* ====== RESPONSIVE STYLES ====== */
+
+/* Responsive scaling */
+@media (max-width: 800px) {
+  :root {
+    --game-scale: 0.85;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --game-scale: 0.7;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --game-scale: 0.6;
+  }
+}
+
+/* Mobile specific variables */
+@media (max-width: 768px) {
+  :root {
+    --cell-size: 28px;
+    --mobile-board-width: calc(10 * var(--cell-size));
+    --mobile-board-height: calc(18 * var(--cell-size));
+    --mobile-side-width: 120px;
+  }
+}
+
+/* Very narrow screens (phones < 400px) */
+@media (max-width: 400px) {
+  :root {
+    --cell-size: 22px;
+    --mobile-side-width: 85px;
+  }
+}
+
+/* Mobile layout overhaul */
+@media (max-width: 768px) {
+  #app {
+    gap: 0;
+    transform: none;
+    margin-top: 0;
+    margin-bottom: 0;
+    width: 100%;
+    padding: 0;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: calc(100vh - var(--headerH) - 40px);
+    max-height: unset;
+  }
+  
+  /* Mobile game wrapper - centers content vertically */
+  .mobile-game-wrapper {
+    order: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin: auto 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Mobile score box above the game */
+  .mobile-score-box {
+    order: 1;
+    width: 100%;
+    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 32px);
+    padding: 12px 16px !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-radius: 12px;
+    margin: 0 16px;
+  }
+  
+  .mobile-score-box .score-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .mobile-score-box h3 {
+    display: block !important;
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+    text-align: left;
+  }
+  
+  .mobile-score-box .score {
+    font-size: 1.6rem !important;
+    margin-bottom: 0 !important;
+    font-weight: 700;
+    line-height: 1;
+  }
+  
+  .mobile-score-box .stats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 0;
+    font-size: 0.8rem;
+    text-align: right;
+  }
+  
+  /* Game area container */
+  .mobile-game-area {
+    order: 2;
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-end;
+    width: 100%;
+    justify-content: center;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .game-container {
+    order: 2;
+    margin: 0;
+    flex-shrink: 0;
+  }
+  
+  .side-panel.left {
+    order: 1;
+    flex-direction: column;
+    gap: 0;
+    width: var(--mobile-side-width);
+    height: var(--mobile-board-height);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  
+  .side-panel.right {
+    display: none !important;
+  }
+  
+  /* Stack hold and next in left panel */
+  .side-panel.left .info-box {
+    min-width: unset;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 0;
+    flex: none;
+  }
+  
+  /* Mobile-specific info box ordering */
+  .side-panel.left .info-box:has(#holdPreview) { 
+    order: 1;
+    margin-bottom: auto;
+  }
+  .side-panel.left .info-box:has(#nextQueue) { 
+    order: 2;
+  }
+  
+  /* Fallback for browsers without :has() support */
+  @supports not selector(:has(*)) {
+    .side-panel.left > .info-box.piece-box:first-child { 
+      order: 1;
+      margin-bottom: auto;
+    }
+    .side-panel.left > .info-box.piece-box:last-child { 
+      order: 2;
+    }
+  }
+  
+  /* Mobile game over scaling */
+  #app.game-over {
+    transform: none !important;
+  }
+  
+  #app.game-over .mobile-game-wrapper {
+    transform: scale(0.95);
+  }
+  
+  /* Mobile board adjustments */
+  .board-wrap {
+    padding: 12px;
+    border-radius: 12px;
+  }
+  
+  /* Adjust text sizes on mobile */
+  .info-box h3 {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  
+  .stats {
+    font-size: 0.8rem;
+  }
+  
+  /* Smaller preview pieces on mobile */
+  .preview-piece {
+    grid-template-columns: repeat(4, 10px);
+    grid-template-rows: repeat(3, 10px);
+    gap: 0;
+  }
+  
+  .preview-cell {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .empty-hold {
+    width: 40px;
+    height: 30px;
+  }
+  
+  /* Footer positioning on mobile */
+  .footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 8px 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  
+  /* Mobile game over text */
+  .game-over-text {
+    font-size: 2.5rem;
+  }
+  
+  /* Mobile help modal */
+  .help-content {
+    margin: 20px;
+    padding: 24px;
+    max-height: calc(100vh - 40px);
+  }
+  
+  .help-content h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Very narrow screens adjustments */
+@media (max-width: 400px) {
+  #app {
+    gap: 0;
+    padding: 0;
+    height: calc(100vh - var(--headerH) - 35px);
+  }
+  
+  .mobile-game-wrapper {
+    gap: 8px;
+  }
+  
+  .mobile-score-box {
+    padding: 8px 12px !important;
+    width: 100%;
+    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 16px);
+    gap: 12px;
+    border-radius: 8px;
+    margin: 0 8px;
+  }
+  
+  .mobile-score-box h3 {
+    font-size: 0.65rem;
+    margin-bottom: 2px;
+  }
+  
+  .mobile-score-box .score {
+    font-size: 1.3rem !important;
+  }
+  
+  .mobile-score-box .stats {
+    font-size: 0.7rem;
+    gap: 1px;
+  }
+  
+  .mobile-game-area {
+    gap: 8px;
+    flex-direction: row;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .board-wrap {
+    padding: 8px;
+    border-radius: 8px;
+  }
+  
+  /* Smaller cells on very narrow screens */
+  .cell.filled {
+    transform: scale(0.85);
+    border-radius: 2px;
+  }
+  
+  .cell.ghost {
+    border-radius: 2px;
+  }
+  
+  .side-panel.left .info-box {
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+  
+  .info-box h3 {
+    font-size: 0.7rem;
+    margin-bottom: 4px;
+  }
+  
+  .stats {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  
+  /* Even smaller preview pieces */
+  .preview-piece {
+    grid-template-columns: repeat(4, 8px);
+    grid-template-rows: repeat(3, 8px);
+  }
+  
+  .preview-cell {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .empty-hold {
+    width: 32px;
+    height: 24px;
+    border-width: 1px;
+  }
+  
+  .next-queue {
+    gap: 8px;
+  }
+  
+  .hold-preview {
+    gap: 8px;
+  }
+  
+  /* Footer on very narrow screens */
+  .footer {
+    padding: 6px 0;
+    font-size: 0.7rem;
+  }
+  
+  /* Very narrow screens game over */
+  .game-over-text {
+    font-size: 2rem;
+    letter-spacing: 1px;
+  }
+  
+  /* Mobile paused text */
+  .paused-text {
+    padding: 8px 16px;
+    font-size: 1rem;
+    border-radius: 6px;
+  }
+  
+  /* Very narrow screens help modal */
+  .help-content {
+    margin: 10px;
+    padding: 20px;
+    max-height: calc(100vh - 20px);
+  }
+  
+  .help-content h2 {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+  }
+  
+  .help-content h3 {
+    font-size: 1.1rem;
+    margin: 16px 0 10px;
+  }
+  
+  .help-content p,
+  .help-content ul {
+    font-size: 0.9rem;
+  }
+}

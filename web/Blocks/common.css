@@ -14,6 +14,13 @@
   --panelW: 260px;
 }
 
+/* Very narrow screens */
+@media (max-width: 400px) {
+  :root {
+    --headerH: 85px;
+  }
+}
+
 /* ====== RESET & BASE ====== */
 * {
   box-sizing: border-box;
@@ -31,7 +38,16 @@ body {
   align-items: center;
   padding-top: var(--headerH);
   overflow-x: hidden;
-  overflow-y: auto;
+}
+
+/* Prevent scrolling on mobile */
+@media (max-width: 768px) {
+  html, body {
+    overflow: hidden;
+    height: 100%;
+    position: fixed;
+    width: 100%;
+  }
 }
 
 /* ====== HEADER ====== */
@@ -119,6 +135,28 @@ body {
 
 .hamburger span::after {
   top: 8px;
+}
+
+/* Very narrow screens hamburger */
+@media (max-width: 400px) {
+  .hamburger span {
+    width: 20px;
+    height: 2.5px;
+  }
+  
+  .hamburger span::before,
+  .hamburger span::after {
+    width: 20px;
+    height: 2.5px;
+  }
+  
+  .hamburger span::before {
+    top: -6px;
+  }
+  
+  .hamburger span::after {
+    top: 6px;
+  }
 }
 
 .hamburger.active {
@@ -274,6 +312,25 @@ body {
   }
 }
 
+/* Very narrow screens */
+@media (max-width: 400px) {
+  .games-dropdown {
+    padding: 6px;
+  }
+  
+  .game-item {
+    padding: 10px 14px;
+  }
+  
+  .game-name {
+    font-size: 1rem;
+  }
+  
+  .game-desc {
+    font-size: 0.8rem;
+  }
+}
+
 /* ====== BUTTONS ====== */
 .btn {
   cursor: pointer;
@@ -281,7 +338,6 @@ body {
   border-radius: 8px;
   font-weight: 600;
   transition: all .15s ease;
-  font-family: inherit;
 }
 
 .btn-primary {
@@ -360,12 +416,20 @@ body {
   transform: translateX(-100%);
   transition: .25s ease;
   z-index: 90;
-  padding: 90px 22px 30px;
+  padding: 120px 22px 30px;
   overflow-y: auto;
 }
 
 #panel.open {
   transform: translateX(0);
+}
+
+/* Narrower panel on very small screens */
+@media (max-width: 400px) {
+  #panel {
+    width: min(220px, 70vw);
+    padding: 120px 16px 30px;
+  }
 }
 
 .setting {
@@ -387,6 +451,31 @@ body {
 .setting label[title]:hover {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
+}
+
+/* Smaller settings on very narrow screens */
+@media (max-width: 400px) {
+  .setting {
+    margin-bottom: 18px;
+  }
+  
+  .setting label {
+    font-size: 0.9rem;
+  }
+  
+  .switch {
+    width: 38px;
+    height: 20px;
+  }
+  
+  .slider:before {
+    width: 16px;
+    height: 16px;
+  }
+  
+  input:checked + .slider:before {
+    transform: translateX(16px);
+  }
 }
 
 /* ====== STEPPER ====== */
@@ -517,4 +606,12 @@ input:checked + .slider:before {
 
 .footer a:hover {
   opacity: .8;
+}
+
+/* Mobile footer */
+@media (max-width: 400px) {
+  .footer {
+    margin: 12px 0 8px;
+    font-size: .75rem;
+  }
 }

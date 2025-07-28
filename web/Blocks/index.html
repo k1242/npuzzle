@@ -19,8 +19,13 @@
   <link rel="manifest" href="https://qdiag.xyz/assets/icons/site.webmanifest">
   
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- CSS files -->
   <link rel="stylesheet" href="common.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="board.css">
+  <link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
   <header class="header">
@@ -64,6 +69,13 @@
         <span class="slider"></span>
       </label>
     </div>
+    <div class="setting">
+      <label title="Control pieces with mouse movement">Mouse Control</label>
+      <label class="switch">
+        <input type="checkbox" id="mouseControlToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
   </div>
   
   <div id="app">
@@ -103,14 +115,6 @@
     </div>
   </div>
   
-  <div class="controls">
-    <button class="control-btn" id="leftBtn">←</button>
-    <button class="control-btn" id="downBtn">↓</button>
-    <button class="control-btn" id="rotateBtn">↻</button>
-    <button class="control-btn" id="rightBtn">→</button>
-    <button class="control-btn" id="dropBtn">⇓</button>
-  </div>
-  
   <footer class="footer">
     <a href="https://t.me/qdiag" target="_blank">Telegram channel @qdiag</a>
   </footer>
@@ -147,7 +151,11 @@
     </div>
   </div>
   
+  <!-- JavaScript files -->
   <script src="common.js"></script>
-  <script src="script.js"></script>
+  <script type="module" src="engine.js"></script>
+  <script type="module" src="renderer.js"></script>
+  <script type="module" src="controller.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
