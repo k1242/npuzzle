@@ -22,7 +22,9 @@
   
   <!-- CSS files -->
   <link rel="stylesheet" href="common.css">
-  <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="board.css">
+  <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
@@ -100,8 +102,8 @@
           </div>
         </div>
         
-        <!-- Next box container - shows on mobile -->
-        <div class="info-box piece-box next-queue-container" id="nextBox">
+        <!-- Next box - moves here on mobile from right panel -->
+        <div class="info-box piece-box mobile-next" id="nextBox">
           <h3>Next</h3>
           <div class="next-queue" id="nextQueue"></div>
         </div>
@@ -129,8 +131,7 @@
           </div>
         </div>
         
-        <!-- Next box container - shows on desktop -->
-        <div class="info-box piece-box next-queue-container">
+        <div class="info-box piece-box desktop-next">
           <h3>Next</h3>
           <div class="next-queue" id="nextQueueDesktop"></div>
         </div>
@@ -176,9 +177,7 @@
   
   <!-- JavaScript files -->
   <script src="common.js"></script>
-  <script type="module" src="config.js"></script>
   <script type="module" src="events.js"></script>
-  <script type="module" src="animation.js"></script>
   <script type="module" src="engine.js"></script>
   <script type="module" src="renderer.js"></script>
   <script type="module" src="controller.js"></script>

@@ -1,7 +1,12 @@
 // ====== GAME ENGINE ======
 
 import { EventEmitter, GameEvents } from './events.js';
-import { Config } from './config.js';
+
+// Constants
+export const ROWS = 18, COLS = 10;
+export const LOCK_DELAY = 500;
+export const STORAGE_KEY = 'blocks_game_state';
+export const HIGH_SCORE_KEY = 'blocks_high_score';
 
 // Pieces with SRS spawn positions
 export const PIECES = {
@@ -61,6 +66,9 @@ export class GameEngine extends EventEmitter {
     this.canHold = true;
     this.manualDropping = false;
     
+    // Animation setting
+    this.animationsEnabled = true;
+    
     // Timers
     this.dropTimer = null;
     this.lockTimer = null;
@@ -97,7 +105,7 @@ export class GameEngine extends EventEmitter {
   
   // Board management
   initBoard() {
-    this.board = Array(Config.BOARD.ROWS).fill().map(() => Array(Config.BOARD.COLS).fill(0));
+    this.board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
   }
   
   isValidPosition(piece, dx = 0, dy = 0) {
@@ -106,7 +114,7 @@ export class GameEngine extends EventEmitter {
         if (!val) return true;
         const newX = piece.x + c + dx;
         const newY = piece.y + r + dy;
-        return newX >= 0 && newX < Config.BOARD.COLS && newY < Config.BOARD.ROWS && 
+        return newX >= 0 && newX < COLS && newY < ROWS && 
                (newY < 0 || !this.board[newY][newX]);
       })
     );
@@ -228,7 +236,7 @@ export class GameEngine extends EventEmitter {
     
     // Clamp target position to valid range
     const minX = -bounds.left;
-    const maxX = Config.BOARD.COLS - 1 - bounds.right;
+    const maxX = COLS - 1 - bounds.right;
     const clampedX = Math.max(minX, Math.min(maxX, targetX));
     
     // Move piece
@@ -252,7 +260,7 @@ export class GameEngine extends EventEmitter {
     
     if (this.movePiece(0, 1)) {
       if (this.manualDropping) {
-        this.score += Config.SCORING.SOFT_DROP;
+        this.score++;
         this.emit(GameEvents.SCORE_UPDATE, this.getState());
         this.emit(GameEvents.STATS_UPDATE, this.getState());
       }
@@ -277,13 +285,34 @@ export class GameEngine extends EventEmitter {
       dropDist++;
     }
     
-    if (dropDist > 0) {
-      // Emit hard drop event with distance
-      this.emit(GameEvents.HARD_DROP_START, {
-        piece: this.currentPiece,
-        distance: dropDist,
-        targetY: testPiece.y
-      });
+    if (dropDist > 0 && this.animationsEnabled) {
+      // Animate the fall
+      const dropSpeed = Math.max(3, 50 / dropDist);
+      let currentDrop = 0;
+      
+      const animateDrop = () => {
+        if (currentDrop < dropDist) {
+          if (this.isValidPosition(this.currentPiece, 0, 1)) {
+            this.currentPiece.y++;
+            currentDrop++;
+            this.updateGhost();
+            this.emit(GameEvents.BOARD_UPDATE, this.getState());
+            setTimeout(animateDrop, dropSpeed);
+          } else {
+            this.finishHardDrop(currentDrop);
+          }
+        } else {
+          this.finishHardDrop(dropDist);
+        }
+      };
+      
+      animateDrop();
+    } else if (dropDist > 0) {
+      // No animation - drop instantly
+      this.currentPiece.y = testPiece.y;
+      this.updateGhost();
+      this.emit(GameEvents.BOARD_UPDATE, this.getState());
+      this.finishHardDrop(dropDist);
     } else {
       // Already at bottom
       this.hardDropping = false;
@@ -291,9 +320,8 @@ export class GameEngine extends EventEmitter {
     }
   }
   
-  // Complete hard drop (called by animation manager)
-  completeHardDrop(dropDist) {
-    this.score += dropDist * Config.SCORING.HARD_DROP;
+  finishHardDrop(dropDist) {
+    this.score += dropDist * 2;
     this.emit(GameEvents.SCORE_UPDATE, this.getState());
     this.emit(GameEvents.STATS_UPDATE, this.getState());
     this.hardDropping = false;
@@ -343,7 +371,7 @@ export class GameEngine extends EventEmitter {
   
   // Lock delay
   resetLockDelay() {
-    if (this.moveCount < Config.MOVEMENT.MAX_MOVES_BEFORE_LOCK && this.currentPiece) {
+    if (this.moveCount < 15 && this.currentPiece) {
       if (this.lockTimer) {
         clearTimeout(this.lockTimer);
         this.lockTimer = null;
@@ -352,7 +380,7 @@ export class GameEngine extends EventEmitter {
         if (this.currentPiece && !this.isValidPosition(this.currentPiece, 0, 1)) {
           this.lockPiece();
         }
-      }, Config.TIMING.LOCK_DELAY);
+      }, LOCK_DELAY);
     }
   }
   
@@ -391,7 +419,7 @@ export class GameEngine extends EventEmitter {
     const linesToClear = [];
     
     // Find completed lines
-    for (let r = 0; r < Config.BOARD.ROWS; r++) {
+    for (let r = 0; r < ROWS; r++) {
       if (this.board[r].every(cell => cell !== 0)) {
         linesToClear.push(r);
       }
@@ -420,16 +448,17 @@ export class GameEngine extends EventEmitter {
       this.board.splice(row, 1);
     });
     
-    while (this.board.length < Config.BOARD.ROWS) {
-      this.board.unshift(Array(Config.BOARD.COLS).fill(0));
+    while (this.board.length < ROWS) {
+      this.board.unshift(Array(COLS).fill(0));
     }
     
     // Update score
-    this.score += Config.SCORING.LINES[linesToClear.length] * this.level;
+    const points = [0, 100, 300, 500, 800];
+    this.score += points[linesToClear.length] * this.level;
     this.lines += linesToClear.length;
     
     // Check level up
-    if (this.lines >= this.level * Config.SCORING.LINES_PER_LEVEL) {
+    if (this.lines >= this.level * 10) {
       this.level++;
       this.updateDropSpeed();
       this.emit(GameEvents.LEVEL_UPDATE, this.getState());
@@ -475,7 +504,7 @@ export class GameEngine extends EventEmitter {
       clearInterval(this.dropTimer);
       this.dropTimer = null;
     }
-    const speed = Config.getDropSpeed(this.level);
+    const speed = Math.max(50, 1000 - (this.level - 1) * 100);
     this.dropTimer = setInterval(() => {
       if (!this.gameOver && !this.paused && !this.clearingLines && !this.hardDropping) {
         this.manualDropping = false;
@@ -575,14 +604,14 @@ export class GameEngine extends EventEmitter {
   
   // Score management
   loadHighScore() {
-    const saved = localStorage.getItem(Config.STORAGE.HIGH_SCORE);
+    const saved = localStorage.getItem(HIGH_SCORE_KEY);
     if (saved) this.highScore = parseInt(saved) || 0;
   }
   
   saveHighScore() {
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      localStorage.setItem(Config.STORAGE.HIGH_SCORE, this.highScore);
+      localStorage.setItem(HIGH_SCORE_KEY, this.highScore);
     }
   }
   
@@ -603,11 +632,11 @@ export class GameEngine extends EventEmitter {
       paused: this.paused
     };
     
-    localStorage.setItem(Config.STORAGE.GAME_STATE, JSON.stringify(saveData));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
   }
   
   loadState() {
-    const saved = localStorage.getItem(Config.STORAGE.GAME_STATE);
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return false;
     
     try {
@@ -630,7 +659,7 @@ export class GameEngine extends EventEmitter {
   }
   
   clearSavedState() {
-    localStorage.removeItem(Config.STORAGE.GAME_STATE);
+    localStorage.removeItem(STORAGE_KEY);
   }
   
   // Get state for rendering
@@ -648,5 +677,10 @@ export class GameEngine extends EventEmitter {
       bag: this.bag,
       nextBag: this.nextBag
     };
+  }
+  
+  // Set animations enabled
+  setAnimationsEnabled(enabled) {
+    this.animationsEnabled = enabled;
   }
 }

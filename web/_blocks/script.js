@@ -4,7 +4,10 @@ import { GameEngine } from './engine.js';
 import { Renderer } from './renderer.js';
 import { InputController } from './controller.js';
 import { GameEvents } from './events.js';
-import { Config } from './config.js';
+
+// Settings keys
+const ANIMATIONS_KEY = 'blocks_animations_enabled';
+const MOUSE_CONTROL_KEY = 'blocks_mouse_control_enabled';
 
 // App state
 const app = {
@@ -25,11 +28,11 @@ const $ = sel => document.querySelector(sel);
 // Settings management
 const loadSettings = () => {
   // Load animations setting
-  const animSaved = localStorage.getItem(Config.STORAGE.ANIMATIONS_ENABLED);
+  const animSaved = localStorage.getItem(ANIMATIONS_KEY);
   app.settings.animationsEnabled = animSaved === null ? true : animSaved === 'true';
   
   // Load mouse control setting
-  const mouseSaved = localStorage.getItem(Config.STORAGE.MOUSE_CONTROL_ENABLED);
+  const mouseSaved = localStorage.getItem(MOUSE_CONTROL_KEY);
   app.settings.mouseControlEnabled = mouseSaved === 'true';
   
   // Apply settings to UI
@@ -38,8 +41,8 @@ const loadSettings = () => {
 };
 
 const saveSettings = () => {
-  localStorage.setItem(Config.STORAGE.ANIMATIONS_ENABLED, app.settings.animationsEnabled);
-  localStorage.setItem(Config.STORAGE.MOUSE_CONTROL_ENABLED, app.settings.mouseControlEnabled);
+  localStorage.setItem(ANIMATIONS_KEY, app.settings.animationsEnabled);
+  localStorage.setItem(MOUSE_CONTROL_KEY, app.settings.mouseControlEnabled);
 };
 
 // Settings panel pause handling
@@ -98,7 +101,8 @@ const initGame = () => {
   });
   
   // Apply loaded settings
-  app.renderer.animationManager.setEnabled(app.settings.animationsEnabled);
+  app.renderer.setAnimationsEnabled(app.settings.animationsEnabled);
+  app.engine.setAnimationsEnabled(app.settings.animationsEnabled);
   app.controller.setMouseControl(app.settings.mouseControlEnabled);
   
   // Try to load saved game
@@ -129,7 +133,8 @@ const setupUIHandlers = () => {
   // Settings toggles
   $('#animationsToggle').addEventListener('change', e => {
     app.settings.animationsEnabled = e.target.checked;
-    app.renderer.animationManager.setEnabled(app.settings.animationsEnabled);
+    app.renderer.setAnimationsEnabled(app.settings.animationsEnabled);
+    app.engine.setAnimationsEnabled(app.settings.animationsEnabled);
     app.engine.emit(GameEvents.ANIMATION_TOGGLE, app.settings.animationsEnabled);
     saveSettings();
   });
@@ -185,6 +190,22 @@ const setupUIHandlers = () => {
   });
 };
 
+// Handle next queue duplication for desktop
+const syncNextQueues = () => {
+  const mobileNext = $('#nextQueue');
+  const desktopNext = $('#nextQueueDesktop');
+  
+  if (mobileNext && desktopNext) {
+    // Mirror content from mobile to desktop
+    app.engine.on(GameEvents.NEXT_QUEUE_UPDATE, () => {
+      // Small delay to ensure mobile is rendered first
+      setTimeout(() => {
+        desktopNext.innerHTML = mobileNext.innerHTML;
+      }, 0);
+    });
+  }
+};
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize common UI components
@@ -198,4 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Setup UI handlers
   setupUIHandlers();
+  
+  // Setup next queue syncing
+  syncNextQueues();
 });

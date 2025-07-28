@@ -6,6 +6,7 @@
     --game-scale: 0.85;
   }
   
+  /* Allow interaction with header elements */
   .header,
   .header * {
     touch-action: auto;
@@ -37,7 +38,7 @@
   }
 }
 
-/* Very narrow screens */
+/* Very narrow screens (phones < 400px) */
 @media (max-width: 400px) {
   :root {
     --cell-size: 22px;
@@ -50,13 +51,16 @@
   display: none;
 }
 
-/* Unified next queue - desktop shows in right panel */
-.side-panel.right .next-queue-container {
+.mobile-next {
+  display: none;
+}
+
+.desktop-next {
   display: block;
 }
 
-.side-panel.left .next-queue-container {
-  display: none;
+.game-area-wrapper {
+  display: contents; /* Act as if children are direct children of parent */
 }
 
 /* Mobile layout overhaul */
@@ -128,7 +132,7 @@
     text-align: right;
   }
   
-  /* Game area wrapper for mobile */
+  /* Game area wrapper */
   .game-area-wrapper {
     order: 2;
     display: flex;
@@ -148,7 +152,7 @@
     touch-action: manipulation;
   }
   
-  /* Left panel on mobile */
+  /* Left panel styling for mobile */
   .side-panel.left {
     order: 1;
     flex-direction: column;
@@ -166,9 +170,13 @@
     display: none !important;
   }
   
-  /* Show next queue in left panel on mobile */
-  .side-panel.left .next-queue-container {
-    display: block;
+  /* Show mobile next, hide desktop next */
+  .mobile-next {
+    display: block !important;
+  }
+  
+  .desktop-next {
+    display: none !important;
   }
   
   /* Stack hold and next in left panel */
@@ -187,7 +195,7 @@
   }
   
   /* Next box at bottom */
-  .next-queue-container {
+  #nextBox {
     order: 2;
   }
   
@@ -246,7 +254,7 @@
     z-index: 10;
   }
   
-  /* Mobile game over text */
+  /* Mobile game over text - position in center of viewport */
   .game-over-text {
     position: fixed !important;
     top: 50% !important;
@@ -257,6 +265,7 @@
     z-index: 20;
   }
   
+  /* Ensure game over text is visible when game is over */
   #app.game-over .game-over-text {
     transform: translate(-50%, -50%) !important;
   }
@@ -285,7 +294,7 @@
   .help-content h2 {
     font-size: 1.5rem;
   }
-}
+} /* End of @media (max-width: 768px) */
 
 /* Very narrow screens adjustments */
 @media (max-width: 400px) {
@@ -327,6 +336,7 @@
     border-radius: 8px;
   }
   
+  /* Smaller cells on very narrow screens */
   .cell.filled {
     transform: scale(0.85);
     border-radius: 2px;
@@ -351,6 +361,7 @@
     line-height: 1.4;
   }
   
+  /* Reasonably sized preview pieces on narrow screens */
   .preview-piece {
     grid-template-columns: repeat(4, 11px);
     grid-template-rows: repeat(3, 11px);
@@ -375,22 +386,26 @@
     gap: 6px;
   }
   
+  /* Footer on very narrow screens */
   .footer {
     padding: 6px 0;
     font-size: 0.7rem;
   }
   
+  /* Very narrow screens game over */
   .game-over-text {
     font-size: 2rem;
     letter-spacing: 1px;
   }
   
+  /* Mobile paused text */
   .paused-text {
     padding: 8px 16px;
     font-size: 1rem;
     border-radius: 6px;
   }
   
+  /* Very narrow screens help modal */
   .help-content {
     margin: 10px;
     padding: 20px;
@@ -414,4 +429,4 @@
   .help-content ul {
     font-size: 0.9rem;
   }
-}
+} /* End of @media (max-width: 400px) */

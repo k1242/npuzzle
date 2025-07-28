@@ -115,6 +115,12 @@
   line-height: 1.6;
 }
 
+/* Mobile score box - hidden by default, shown in responsive.css */
+.mobile-score-box {
+  width: auto !important;
+  box-sizing: border-box;
+}
+
 /* Game Over text - desktop positioning */
 .game-over-text {
   position: absolute;
@@ -208,9 +214,4 @@ body.no-animations .cell.clearing {
 /* Mouse control cursor */
 body.mouse-control-enabled .board-wrap {
   cursor: crosshair;
-}
-
-/* Mobile-specific score box (added for proper width control) */
-.mobile-score-box {
-  width: auto !important; /* Prevent width: 100% inheritance */
 }

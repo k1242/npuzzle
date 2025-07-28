@@ -1,9 +1,7 @@
 // ====== RENDERER ======
 
-import { PIECES } from './engine.js';
+import { PIECES, ROWS, COLS } from './engine.js';
 import { GameEvents } from './events.js';
-import { Config } from './config.js';
-import { AnimationManager } from './animation.js';
 
 export class Renderer {
   constructor(elements, eventBus) {
@@ -17,25 +15,24 @@ export class Renderer {
     this.scoreEl = elements.score;
     this.levelEl = elements.level;
     this.linesEl = elements.lines;
-    this.nextQueueDesktopEl = elements.nextQueueDesktop;
+    this.nextQueueEl = elements.nextQueue;
     
     // Mobile elements
     this.scoreMobileEl = elements.scoreMobile;
     this.levelMobileEl = elements.levelMobile;
     this.linesMobileEl = elements.linesMobile;
-    this.nextQueueMobileEl = elements.nextQueue;
     
     // Shared elements
     this.holdPreviewEl = elements.holdPreview;
     this.pausedOverlayEl = elements.pausedOverlay;
     this.appEl = elements.app;
     
-    // Cell size for mobile
-    this.cellSize = Config.VISUAL.CELL_SIZE.DESKTOP;
-    this.updateCellSize();
+    // Animation settings
+    this.animationsEnabled = true;
     
-    // Animation manager
-    this.animationManager = new AnimationManager(this.boardEl, this.events);
+    // Cell size for mobile
+    this.cellSize = 26;
+    this.updateCellSize();
     
     // Subscribe to events
     this.subscribeToEvents();
@@ -48,43 +45,31 @@ export class Renderer {
     this.events.on(GameEvents.NEXT_QUEUE_UPDATE, (state) => this.updateNextQueue(state));
     this.events.on(GameEvents.HOLD_UPDATE, (state) => this.updateHoldDisplay(state));
     
-    // Hard drop animation
-    this.events.on(GameEvents.HARD_DROP_START, (data) => {
-      this.animationManager.animateHardDrop(
-        data.piece,
-        data.distance,
-        () => {
-          this.updateGhost();
-          this.renderBoard(this.events.getState());
-        },
-        () => {
-          this.events.completeHardDrop(data.distance);
-        }
-      );
+    // Animation events
+    this.events.on(GameEvents.LINES_CLEARED, (data) => {
+      this.animateLineClear(data.lines, data.callback);
     });
     
     // Game state events
     this.events.on(GameEvents.GAME_PAUSE, () => this.updatePauseOverlay(true));
     this.events.on(GameEvents.GAME_RESUME, () => this.updatePauseOverlay(false));
-    this.events.on(GameEvents.GAME_OVER, () => this.animationManager.animateGameOver());
-    this.events.on(GameEvents.GAME_START, () => this.animationManager.resetGameOver());
+    this.events.on(GameEvents.GAME_OVER, () => this.showGameOver());
+    this.events.on(GameEvents.GAME_START, () => this.hideGameOver());
+    
+    // Settings events
+    this.events.on(GameEvents.ANIMATION_TOGGLE, (enabled) => {
+      this.setAnimationsEnabled(enabled);
+    });
   }
   
   // Update cell size based on screen width
   updateCellSize() {
-    if (window.innerWidth <= Config.BREAKPOINTS.NARROW) {
-      this.cellSize = Config.VISUAL.CELL_SIZE.MOBILE;
-    } else if (window.innerWidth <= Config.BREAKPOINTS.MOBILE) {
-      this.cellSize = Config.VISUAL.CELL_SIZE.TABLET;
+    if (window.innerWidth <= 400) {
+      this.cellSize = 22;
+    } else if (window.innerWidth <= 768) {
+      this.cellSize = 28;
     } else {
-      this.cellSize = Config.VISUAL.CELL_SIZE.DESKTOP;
-    }
-  }
-  
-  // Update ghost for animations
-  updateGhost() {
-    if (this.events && this.events.currentPiece) {
-      this.events.updateGhost();
+      this.cellSize = 26;
     }
   }
   
@@ -95,8 +80,8 @@ export class Renderer {
     this.boardEl.innerHTML = '';
     
     // Render board cells
-    for (let r = 0; r < Config.BOARD.ROWS; r++) {
-      for (let c = 0; c < Config.BOARD.COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
         if (gameState.board[r][c]) {
@@ -125,8 +110,8 @@ export class Renderer {
               });
             });
             
-            if (!overlaps && gy >= 0 && gy < Config.BOARD.ROWS && gx >= 0 && gx < Config.BOARD.COLS) {
-              const idx = gy * Config.BOARD.COLS + gx;
+            if (!overlaps && gy >= 0 && gy < ROWS && gx >= 0 && gx < COLS) {
+              const idx = gy * COLS + gx;
               this.boardEl.children[idx]?.classList.add('ghost', gameState.currentPiece.type);
             }
           }
@@ -141,8 +126,8 @@ export class Renderer {
           if (val) {
             const x = gameState.currentPiece.x + c;
             const y = gameState.currentPiece.y + r;
-            if (y >= 0 && y < Config.BOARD.ROWS && x >= 0 && x < Config.BOARD.COLS) {
-              const idx = y * Config.BOARD.COLS + x;
+            if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+              const idx = y * COLS + x;
               this.boardEl.children[idx]?.classList.add('filled', gameState.currentPiece.type);
             }
           }
@@ -187,25 +172,16 @@ export class Renderer {
     return preview;
   }
   
-  // Update next queue - unified for desktop and mobile
+  // Update next queue
   updateNextQueue(gameState) {
-    const upcoming = [...gameState.bag, ...gameState.nextBag].slice(0, Config.VISUAL.NEXT_PIECES_COUNT);
+    if (!this.nextQueueEl) return;
     
-    // Update mobile next queue
-    if (this.nextQueueMobileEl) {
-      this.nextQueueMobileEl.innerHTML = '';
-      upcoming.forEach(type => {
-        this.nextQueueMobileEl.appendChild(this.renderPreview(type));
-      });
-    }
+    this.nextQueueEl.innerHTML = '';
     
-    // Update desktop next queue
-    if (this.nextQueueDesktopEl) {
-      this.nextQueueDesktopEl.innerHTML = '';
-      upcoming.forEach(type => {
-        this.nextQueueDesktopEl.appendChild(this.renderPreview(type));
-      });
-    }
+    const upcoming = [...gameState.bag, ...gameState.nextBag].slice(0, 3);
+    upcoming.forEach(type => {
+      this.nextQueueEl.appendChild(this.renderPreview(type));
+    });
   }
   
   // Update hold display
@@ -230,15 +206,95 @@ export class Renderer {
     }
   }
   
+  // Show game over
+  showGameOver() {
+    if (this.appEl) {
+      this.appEl.classList.add('game-over');
+    }
+  }
+  
+  // Hide game over
+  hideGameOver() {
+    if (this.appEl) {
+      this.appEl.classList.remove('game-over');
+    }
+    if (this.pausedOverlayEl) {
+      this.pausedOverlayEl.style.display = 'none';
+    }
+  }
+  
+  // Animate line clear
+  animateLineClear(lines, callback) {
+    const animationDuration = this.animationsEnabled ? 200 : 0;
+    
+    // Animate clearing
+    if (this.animationsEnabled && this.boardEl) {
+      lines.forEach(row => {
+        for (let c = 0; c < COLS; c++) {
+          const idx = row * COLS + c;
+          this.boardEl.children[idx]?.classList.add('clearing');
+        }
+      });
+    }
+    
+    // Wait for animation then trigger falling animation
+    setTimeout(() => {
+      if (this.animationsEnabled) {
+        this.animateFallingPieces(lines, callback);
+      } else {
+        callback();
+      }
+    }, animationDuration);
+  }
+  
+  // Animate pieces falling after line clear
+  animateFallingPieces(clearedRows, callback) {
+    if (!this.animationsEnabled || !this.boardEl) {
+      callback();
+      return;
+    }
+    
+    const highestClearedRow = Math.min(...clearedRows);
+    
+    // Small delay to let line clear animation finish
+    setTimeout(() => {
+      // Add falling animation to blocks above cleared lines
+      for (let r = 0; r < highestClearedRow; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const idx = r * COLS + c;
+          const cell = this.boardEl.children[idx];
+          if (cell && cell.classList.contains('filled')) {
+            // Calculate drop distance
+            const linesBelow = clearedRows.filter(row => row > r).length;
+            
+            cell.style.transition = 'transform 0.1s linear';
+            cell.style.transform = `translateY(calc(${linesBelow} * var(--cell-size))) scale(0.9)`;
+          }
+        }
+      }
+      
+      // Wait for animation to complete
+      setTimeout(() => {
+        // Reset all transforms
+        this.boardEl.querySelectorAll('.cell').forEach(cell => {
+          cell.style.transition = '';
+          cell.style.transform = '';
+        });
+        
+        // Now update the board
+        callback();
+      }, 100);
+    }, 0);
+  }
+  
+  // Set animations enabled
+  setAnimationsEnabled(enabled) {
+    this.animationsEnabled = enabled;
+    document.body.classList.toggle('no-animations', !enabled);
+  }
+  
   // Get board rect for mouse control
   getBoardRect() {
     return this.boardEl ? this.boardEl.getBoundingClientRect() : null;
-  }
-  
-  // Clean up
-  destroy() {
-    if (this.animationManager) {
-      this.animationManager.destroy();
-    }
   }
 }
