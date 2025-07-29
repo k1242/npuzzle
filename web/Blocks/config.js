@@ -7,6 +7,27 @@ export const Config = {
     COLS: 10
   },
   
+  // Game events
+  EVENTS: {
+    // Unified state update event
+    STATE_UPDATE: 'state:update',
+    
+    // Game flow events
+    GAME_START: 'game:start',
+    GAME_OVER: 'game:over',
+    GAME_PAUSE: 'game:pause',
+    GAME_RESUME: 'game:resume',
+    
+    // Animation events
+    LINES_CLEARED: 'lines:cleared',
+    HARD_DROP_START: 'hard_drop:start',
+    PIECE_SPAWNED: 'piece:spawned',
+    
+    // Settings events
+    ANIMATION_TOGGLE: 'settings:animation',
+    MOUSE_CONTROL_TOGGLE: 'settings:mouse_control'
+  },
+  
   // Timing (ms)
   TIMING: {
     LOCK_DELAY: 500,

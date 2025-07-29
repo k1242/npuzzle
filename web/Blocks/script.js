@@ -3,7 +3,7 @@
 import { GameEngine } from './engine.js';
 import { Renderer } from './renderer.js';
 import { InputController } from './controller.js';
-import { GameEvents } from './events.js';
+import { StorageManager } from './storage.js';
 import { Config } from './config.js';
 
 // App state
@@ -11,6 +11,7 @@ const app = {
   engine: null,
   renderer: null,
   controller: null,
+  storage: null,
   settings: {
     animationsEnabled: true,
     mouseControlEnabled: false,
@@ -24,13 +25,12 @@ const $ = sel => document.querySelector(sel);
 
 // Settings management
 const loadSettings = () => {
-  // Load animations setting
-  const animSaved = localStorage.getItem(Config.STORAGE.ANIMATIONS_ENABLED);
-  app.settings.animationsEnabled = animSaved === null ? true : animSaved === 'true';
+  // Create storage manager if not exists
+  if (!app.storage) {
+    app.storage = new StorageManager(Config);
+  }
   
-  // Load mouse control setting
-  const mouseSaved = localStorage.getItem(Config.STORAGE.MOUSE_CONTROL_ENABLED);
-  app.settings.mouseControlEnabled = mouseSaved === 'true';
+  app.settings = app.storage.loadSettings();
   
   // Apply settings to UI
   $('#animationsToggle').checked = app.settings.animationsEnabled;
@@ -38,8 +38,9 @@ const loadSettings = () => {
 };
 
 const saveSettings = () => {
-  localStorage.setItem(Config.STORAGE.ANIMATIONS_ENABLED, app.settings.animationsEnabled);
-  localStorage.setItem(Config.STORAGE.MOUSE_CONTROL_ENABLED, app.settings.mouseControlEnabled);
+  if (app.storage) {
+    app.storage.saveSettings(app.settings);
+  }
 };
 
 // Settings panel pause handling
@@ -65,6 +66,11 @@ const handleSettingsPanelToggle = (isOpen) => {
 
 // Initialize game
 const initGame = () => {
+  // Create storage manager if not exists
+  if (!app.storage) {
+    app.storage = new StorageManager(Config);
+  }
+  
   // Create game engine (which is also the event bus)
   app.engine = new GameEngine();
   
@@ -74,45 +80,41 @@ const initGame = () => {
     score: $('#score'),
     level: $('#level'),
     lines: $('#lines'),
+    scoreMobile: $('#scoreMobile'),
+    levelMobile: $('#levelMobile'),
+    linesMobile: $('#linesMobile'),
     nextQueue: $('#nextQueue'),
-    nextQueueDesktop: $('#nextQueueDesktop'),
+    nextQueueMobile: $('#nextQueueMobile'),
     holdPreview: $('#holdPreview'),
+    holdPreviewMobile: $('#holdPreviewMobile'),
     pausedOverlay: $('#pausedOverlay'),
-    app: $('#app'),
-    // Mobile elements
-    scoreMobile: $('#score-mobile'),
-    levelMobile: $('#level-mobile'),
-    linesMobile: $('#lines-mobile')
+    app: $('#app')
   }, app.engine); // Pass event bus
   
   // Create input controller
   app.controller = new InputController(app.engine, app.renderer);
   
   // Subscribe to controller-specific events
-  app.engine.on(GameEvents.GAME_OVER, () => {
+  app.engine.on(Config.EVENTS.GAME_OVER, () => {
     app.controller.reset();
   });
   
-  app.engine.on(GameEvents.PIECE_SPAWNED, () => {
+  app.engine.on(Config.EVENTS.PIECE_SPAWNED, () => {
     app.controller.onNewPiece();
   });
   
   // Apply loaded settings
-  app.renderer.animationManager.setEnabled(app.settings.animationsEnabled);
+  app.renderer.setAnimationsEnabled(app.settings.animationsEnabled);
   app.controller.setMouseControl(app.settings.mouseControlEnabled);
   
   // Try to load saved game
   if (app.engine.loadState()) {
     app.engine.updateGhost();
-    // Emit all necessary events to update the UI
-    app.engine.emit(GameEvents.STATS_UPDATE, app.engine.getState());
-    app.engine.emit(GameEvents.NEXT_QUEUE_UPDATE, app.engine.getState());
-    app.engine.emit(GameEvents.HOLD_UPDATE, app.engine.getState());
-    app.engine.emit(GameEvents.BOARD_UPDATE, app.engine.getState());
+    app.engine.emitStateUpdate();
     
     const state = app.engine.getState();
     if (state.paused) {
-      app.engine.emit(GameEvents.GAME_PAUSE);
+      app.engine.emit(Config.EVENTS.GAME_PAUSE);
     }
   } else {
     app.engine.startNewGame();
@@ -129,15 +131,15 @@ const setupUIHandlers = () => {
   // Settings toggles
   $('#animationsToggle').addEventListener('change', e => {
     app.settings.animationsEnabled = e.target.checked;
-    app.renderer.animationManager.setEnabled(app.settings.animationsEnabled);
-    app.engine.emit(GameEvents.ANIMATION_TOGGLE, app.settings.animationsEnabled);
+    app.renderer.setAnimationsEnabled(app.settings.animationsEnabled);
+    app.engine.emit(Config.EVENTS.ANIMATION_TOGGLE, app.settings.animationsEnabled);
     saveSettings();
   });
   
   $('#mouseControlToggle').addEventListener('change', e => {
     app.settings.mouseControlEnabled = e.target.checked;
     app.controller.setMouseControl(app.settings.mouseControlEnabled);
-    app.engine.emit(GameEvents.MOUSE_CONTROL_TOGGLE, app.settings.mouseControlEnabled);
+    app.engine.emit(Config.EVENTS.MOUSE_CONTROL_TOGGLE, app.settings.mouseControlEnabled);
     saveSettings();
   });
   

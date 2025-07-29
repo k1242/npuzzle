@@ -18,10 +18,8 @@
 /* ====== GAME LAYOUT ====== */
 #app {
   display: flex;
-  flex-direction: row;
-  justify-content: center;
-  gap: calc(32px * var(--game-scale));
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   margin-top: 20px;
   flex: 1;
   transform: scale(var(--game-scale));
@@ -29,6 +27,16 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+}
+
+/* Game area wrapper */
+.game-area-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: calc(32px * var(--game-scale));
+  align-items: flex-start;
+  width: 100%;
 }
 
 /* Game over state */
@@ -44,14 +52,9 @@
   opacity: 0.3;
 }
 
-#app.game-over .side-panel .info-box:not(.piece-box) {
-  opacity: 1;
-}
-
 .game-container {
   position: relative;
   overflow: visible;
-  order: 2;
 }
 
 /* Side panels */
@@ -63,12 +66,25 @@
   opacity: 1;
 }
 
-.side-panel.left {
-  order: 1;
-}
-
-.side-panel.right {
-  order: 3;
+/* Desktop specific arrangement */
+@media (min-width: 769px) {
+  /* Score box should be hidden on desktop */
+  #scoreBox {
+    display: none !important;
+  }
+  
+  /* Game area wrapper children order */
+  .side-panel.left {
+    order: 1;
+  }
+  
+  .game-container {
+    order: 2;
+  }
+  
+  .side-panel.right {
+    order: 3;
+  }
 }
 
 /* ====== GAME BOARD ====== */
@@ -213,6 +229,11 @@
   height: 48px;
   border: 2px dashed #ddd;
   border-radius: 4px;
+}
+
+/* Mobile pieces container - hidden by default */
+.mobile-pieces-container {
+  display: none;
 }
 
 /* ====== OVERLAYS ====== */

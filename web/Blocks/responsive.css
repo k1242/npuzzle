@@ -45,18 +45,102 @@
   }
 }
 
-/* Desktop layout (default) */
-.mobile-score-box {
+/* Base styles - mobile first approach */
+/* Hide desktop-only elements by default */
+.score-box-desktop {
   display: none;
 }
 
-/* Unified next queue - desktop shows in right panel */
-.side-panel.right .next-queue-container {
-  display: block;
+#holdBox,
+#nextBox {
+  display: none;
 }
 
-.side-panel.left .next-queue-container {
-  display: none;
+/* Show mobile score box by default */
+.score-box {
+  display: flex;
+}
+
+/* Game area wrapper base */
+.game-area-wrapper {
+  display: flex;
+  width: 100%;
+}
+
+/* Desktop layout */
+@media (min-width: 769px) {
+  /* Hide mobile score box */
+  .score-box {
+    display: none !important;
+  }
+  
+  /* Show desktop score box */
+  .score-box-desktop {
+    display: flex !important;
+    flex-direction: column;
+  }
+  
+  /* Main app layout */
+  #app {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  
+  /* Game area wrapper */
+  .game-area-wrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 32px;
+    align-items: flex-start;
+    justify-content: center;
+    order: 2;
+  }
+  
+  /* Remove mobile placeholder */
+  .game-area-wrapper::before {
+    display: none !important;
+    content: none !important;
+  }
+  
+  /* Side panels - ensure correct order */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .side-panel.left {
+    order: 1;
+  }
+  
+  .game-container {
+    order: 2;
+  }
+  
+  .side-panel.right {
+    order: 3;
+  }
+  
+  /* Show desktop Hold on left */
+  #holdBox {
+    display: block !important;
+  }
+  
+  /* Show desktop Next on right */
+  #nextBox {
+    display: block !important;
+  }
+  
+  /* Hide all mobile pieces */
+  .mobile-pieces-container {
+    display: none !important;
+  }
+  
+  #holdBoxMobile,
+  #nextBoxMobile {
+    display: none !important;
+  }
 }
 
 /* Mobile layout overhaul */
@@ -85,11 +169,11 @@
     overflow: hidden;
   }
   
-  /* Show mobile score box */
-  .mobile-score-box {
-    display: flex;
+  /* Mobile score box positioned above board */
+  .score-box {
+    display: flex !important;
     order: 1;
-    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 16px);
+    width: var(--mobile-board-width);
     padding: 12px 16px !important;
     flex-direction: row;
     align-items: center;
@@ -97,29 +181,35 @@
     gap: 16px;
     border-radius: 12px;
     margin-bottom: 12px;
+    position: relative;
   }
   
-  .mobile-score-box .score-section {
+  /* Hide desktop score box */
+  .score-box-desktop {
+    display: none !important;
+  }
+  
+  .score-box .score-section {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
   }
   
-  .mobile-score-box h3 {
+  .score-box h3 {
     display: block !important;
     font-size: 0.75rem;
     margin-bottom: 4px;
     text-align: left;
   }
   
-  .mobile-score-box .score {
+  .score-box .score {
     font-size: 1.6rem !important;
     margin-bottom: 0 !important;
     font-weight: 700;
     line-height: 1;
   }
   
-  .mobile-score-box .stats {
+  .score-box .stats {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -134,11 +224,19 @@
     display: flex;
     flex-direction: row;
     gap: 12px;
-    align-items: flex-end;
+    align-items: center;
     width: 100%;
     justify-content: center;
     max-width: 100%;
     overflow: hidden;
+  }
+  
+  /* Add empty space on left to center the board */
+  .game-area-wrapper::before {
+    content: '';
+    width: var(--mobile-side-width);
+    flex-shrink: 0;
+    display: block !important;
   }
   
   .game-container {
@@ -148,47 +246,55 @@
     touch-action: manipulation;
   }
   
-  /* Left panel on mobile */
+  /* Hide left panel on mobile */
   .side-panel.left {
-    order: 1;
-    flex-direction: column;
-    gap: 0;
-    width: var(--mobile-side-width);
-    height: var(--mobile-board-height);
-    display: flex;
-    align-items: stretch;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-  
-  /* Hide right panel on mobile */
-  .side-panel.right {
     display: none !important;
   }
   
-  /* Show next queue in left panel on mobile */
-  .side-panel.left .next-queue-container {
-    display: block;
+  /* Mobile: Hold and Next on right */
+  .side-panel.right {
+    order: 3;
+    width: var(--mobile-side-width);
+    height: var(--mobile-board-height);
+    display: flex !important;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0;
+    align-items: stretch;
   }
   
-  /* Stack hold and next in left panel */
-  .side-panel.left .info-box {
+  /* Hide desktop Hold and Next */
+  #holdBox,
+  #nextBox {
+    display: none !important;
+  }
+  
+  /* Show mobile pieces container */
+  .mobile-pieces-container {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    justify-content: space-between;
+  }
+  
+  .mobile-pieces-container .info-box {
     min-width: unset;
     width: 100%;
     padding: 10px;
-    margin-bottom: 0;
     flex: none;
   }
   
-  /* Hold box at top */
-  #holdBox {
+  /* Hold at top */
+  #holdBoxMobile {
     order: 1;
-    margin-bottom: auto;
+    display: block !important;
   }
   
-  /* Next box at bottom */
-  .next-queue-container {
+  /* Next below Hold */
+  #nextBoxMobile {
     order: 2;
+    display: block !important;
   }
   
   /* Mobile game over scaling */
@@ -296,30 +402,35 @@
     max-height: calc(100vh - var(--headerH) - 35px);
   }
   
-  .mobile-score-box {
+  .score-box {
     padding: 8px 12px !important;
-    max-width: calc(var(--mobile-board-width) + (2 * var(--mobile-side-width)) + 8px);
+    width: var(--mobile-board-width);
     gap: 12px;
     border-radius: 8px;
     margin-bottom: 8px;
   }
   
-  .mobile-score-box h3 {
+  .score-box h3 {
     font-size: 0.65rem;
     margin-bottom: 2px;
   }
   
-  .mobile-score-box .score {
+  .score-box .score {
     font-size: 1.3rem !important;
   }
   
-  .mobile-score-box .stats {
+  .score-box .stats {
     font-size: 0.7rem;
     gap: 1px;
   }
   
   .game-area-wrapper {
     gap: 8px;
+  }
+  
+  /* Update placeholder width for narrow screens */
+  .game-area-wrapper::before {
+    width: var(--mobile-side-width);
   }
   
   .board-wrap {
@@ -336,7 +447,7 @@
     border-radius: 2px;
   }
   
-  .side-panel.left .info-box {
+  .mobile-pieces-container .info-box {
     padding: 6px 8px;
     border-radius: 6px;
   }

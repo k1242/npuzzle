@@ -77,33 +77,27 @@
   </div>
   
   <div id="app">
-    <!-- Mobile score box - hidden on desktop -->
-    <div class="info-box mobile-score-box">
+    <!-- Mobile score box - positioned above board on mobile -->
+    <div class="info-box score-box" id="scoreBox">
       <div class="score-section">
         <h3>Score</h3>
-        <div class="score" id="score-mobile">0</div>
+        <div class="score" id="scoreMobile">0</div>
       </div>
       <div class="stats">
-        <div>Level <span id="level-mobile">1</span></div>
-        <div>Lines <span id="lines-mobile">0</span></div>
+        <div>Level <span id="levelMobile">1</span></div>
+        <div>Lines <span id="linesMobile">0</span></div>
       </div>
     </div>
     
-    <!-- Game area wrapper for mobile layout -->
+    <!-- Game area wrapper -->
     <div class="game-area-wrapper">
-      <!-- Left panel with Hold and Next (Next moves here on mobile) -->
+      <!-- Left panel with Hold (desktop only) -->
       <div class="side-panel left">
         <div class="info-box piece-box" id="holdBox">
           <h3>Hold</h3>
           <div class="hold-preview" id="holdPreview">
             <div class="empty-hold"></div>
           </div>
-        </div>
-        
-        <!-- Next box container - shows on mobile -->
-        <div class="info-box piece-box next-queue-container" id="nextBox">
-          <h3>Next</h3>
-          <div class="next-queue" id="nextQueue"></div>
         </div>
       </div>
       
@@ -118,9 +112,9 @@
         <h2 id="gameOverText" class="game-over-text">Game Over</h2>
       </div>
       
-      <!-- Right panel - hidden on mobile -->
+      <!-- Right panel with Score and Next -->
       <div class="side-panel right">
-        <div class="info-box">
+        <div class="info-box score-box-desktop" id="scoreBoxDesktop">
           <h3>Score</h3>
           <div class="score" id="score">0</div>
           <div class="stats">
@@ -129,10 +123,24 @@
           </div>
         </div>
         
-        <!-- Next box container - shows on desktop -->
-        <div class="info-box piece-box next-queue-container">
+        <div class="info-box piece-box" id="nextBox">
           <h3>Next</h3>
-          <div class="next-queue" id="nextQueueDesktop"></div>
+          <div class="next-queue" id="nextQueue"></div>
+        </div>
+        
+        <!-- Mobile Hold and Next containers -->
+        <div class="mobile-pieces-container">
+          <div class="info-box piece-box" id="holdBoxMobile">
+            <h3>Hold</h3>
+            <div class="hold-preview" id="holdPreviewMobile">
+              <div class="empty-hold"></div>
+            </div>
+          </div>
+          
+          <div class="info-box piece-box" id="nextBoxMobile">
+            <h3>Next</h3>
+            <div class="next-queue" id="nextQueueMobile"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -177,8 +185,7 @@
   <!-- JavaScript files -->
   <script src="common.js"></script>
   <script type="module" src="config.js"></script>
-  <script type="module" src="events.js"></script>
-  <script type="module" src="animation.js"></script>
+  <script type="module" src="storage.js"></script>
   <script type="module" src="engine.js"></script>
   <script type="module" src="renderer.js"></script>
   <script type="module" src="controller.js"></script>

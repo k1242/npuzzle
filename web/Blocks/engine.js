@@ -1,7 +1,7 @@
 // ====== GAME ENGINE ======
 
-import { EventEmitter, GameEvents } from './events.js';
 import { Config } from './config.js';
+import { StorageManager } from './storage.js';
 
 // Pieces with SRS spawn positions
 export const PIECES = {
@@ -38,9 +38,10 @@ const WALL_KICKS = {
   ]
 };
 
-export class GameEngine extends EventEmitter {
+export class GameEngine {
   constructor() {
-    super();
+    // Event system
+    this.events = {};
     
     // Game state
     this.board = [];
@@ -65,7 +66,38 @@ export class GameEngine extends EventEmitter {
     this.dropTimer = null;
     this.lockTimer = null;
     
-    this.loadHighScore();
+    // Storage manager
+    this.storage = new StorageManager(Config);
+    this.highScore = this.storage.loadHighScore();
+  }
+  
+  // Event system methods
+  on(event, callback) {
+    if (!this.events[event]) {
+      this.events[event] = [];
+    }
+    this.events[event].push(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      this.off(event, callback);
+    };
+  }
+  
+  off(event, callback) {
+    if (!this.events[event]) return;
+    this.events[event] = this.events[event].filter(cb => cb !== callback);
+  }
+  
+  emit(event, data) {
+    if (!this.events[event]) return;
+    this.events[event].forEach(callback => callback(data));
+  }
+  
+  // Helper to check if we can perform actions
+  canPerformAction() {
+    return this.currentPiece && !this.gameOver && !this.paused && 
+           !this.clearingLines && !this.hardDropping;
   }
   
   // 7-bag randomizer
@@ -125,8 +157,7 @@ export class GameEngine extends EventEmitter {
   }
   
   rotatePiece(direction = 1) {
-    if (!this.currentPiece || this.gameOver || this.paused || 
-        this.clearingLines || this.hardDropping) return;
+    if (!this.canPerformAction()) return;
     
     const oldRot = this.currentPiece.rotation;
     const newRot = (oldRot + direction + 4) % 4;
@@ -168,8 +199,7 @@ export class GameEngine extends EventEmitter {
         this.resetLockDelay();
         this.updateGhost();
         
-        this.emit(GameEvents.PIECE_ROTATED, this.getState());
-        this.emit(GameEvents.BOARD_UPDATE, this.getState());
+        this.emitStateUpdate();
         this.saveState();
         return;
       }
@@ -178,8 +208,7 @@ export class GameEngine extends EventEmitter {
   
   // Movement
   movePiece(dx, dy) {
-    if (!this.currentPiece || this.gameOver || this.paused || 
-        this.clearingLines || this.hardDropping) return false;
+    if (!this.canPerformAction()) return false;
     
     if (this.isValidPosition(this.currentPiece, dx, dy)) {
       this.currentPiece.x += dx;
@@ -193,21 +222,22 @@ export class GameEngine extends EventEmitter {
       }
       
       this.updateGhost();
-      
-      this.emit(GameEvents.PIECE_MOVED, this.getState());
-      this.emit(GameEvents.BOARD_UPDATE, this.getState());
+      this.emitStateUpdate();
       this.saveState();
       return true;
     }
     return false;
   }
   
-  // Get piece bounds
-  getPieceBounds(piece) {
-    let leftmost = piece.shape[0].length;
+  // Move piece to specific X position
+  movePieceToX(targetX) {
+    if (!this.canPerformAction()) return;
+    
+    // Find piece bounds
+    let leftmost = this.currentPiece.shape[0].length;
     let rightmost = -1;
     
-    piece.shape.forEach(row => {
+    this.currentPiece.shape.forEach(row => {
       row.forEach((val, c) => {
         if (val) {
           leftmost = Math.min(leftmost, c);
@@ -216,19 +246,9 @@ export class GameEngine extends EventEmitter {
       });
     });
     
-    return { left: leftmost, right: rightmost };
-  }
-  
-  // Move piece to specific X position
-  movePieceToX(targetX) {
-    if (!this.currentPiece || this.gameOver || this.paused || 
-        this.clearingLines || this.hardDropping) return;
-    
-    const bounds = this.getPieceBounds(this.currentPiece);
-    
-    // Clamp target position to valid range
-    const minX = -bounds.left;
-    const maxX = Config.BOARD.COLS - 1 - bounds.right;
+    // Clamp target position
+    const minX = -leftmost;
+    const maxX = Config.BOARD.COLS - 1 - rightmost;
     const clampedX = Math.max(minX, Math.min(maxX, targetX));
     
     // Move piece
@@ -240,8 +260,7 @@ export class GameEngine extends EventEmitter {
       }
       this.updateGhost();
       
-      this.emit(GameEvents.PIECE_MOVED, this.getState());
-      this.emit(GameEvents.BOARD_UPDATE, this.getState());
+      this.emitStateUpdate();
       this.saveState();
     }
   }
@@ -253,8 +272,7 @@ export class GameEngine extends EventEmitter {
     if (this.movePiece(0, 1)) {
       if (this.manualDropping) {
         this.score += Config.SCORING.SOFT_DROP;
-        this.emit(GameEvents.SCORE_UPDATE, this.getState());
-        this.emit(GameEvents.STATS_UPDATE, this.getState());
+        this.emitStateUpdate();
       }
     } else {
       this.lockPiece();
@@ -263,8 +281,7 @@ export class GameEngine extends EventEmitter {
   
   // Hard drop
   hardDrop() {
-    if (!this.currentPiece || this.gameOver || this.paused || 
-        this.clearingLines || this.hardDropping) return;
+    if (!this.canPerformAction()) return;
     
     this.hardDropping = true;
     
@@ -279,7 +296,7 @@ export class GameEngine extends EventEmitter {
     
     if (dropDist > 0) {
       // Emit hard drop event with distance
-      this.emit(GameEvents.HARD_DROP_START, {
+      this.emit(Config.EVENTS.HARD_DROP_START, {
         piece: this.currentPiece,
         distance: dropDist,
         targetY: testPiece.y
@@ -291,19 +308,17 @@ export class GameEngine extends EventEmitter {
     }
   }
   
-  // Complete hard drop (called by animation manager)
+  // Complete hard drop (called by renderer)
   completeHardDrop(dropDist) {
     this.score += dropDist * Config.SCORING.HARD_DROP;
-    this.emit(GameEvents.SCORE_UPDATE, this.getState());
-    this.emit(GameEvents.STATS_UPDATE, this.getState());
+    this.emitStateUpdate();
     this.hardDropping = false;
     this.lockPiece();
   }
   
   // Hold piece
   holdPiece() {
-    if (!this.currentPiece || !this.canHold || this.gameOver || 
-        this.paused || this.clearingLines || this.hardDropping) return;
+    if (!this.canPerformAction() || !this.canHold) return;
     
     this.canHold = false;
     
@@ -323,12 +338,10 @@ export class GameEngine extends EventEmitter {
       // Hold current piece and get next
       this.heldPiece = this.currentPiece.type;
       this.currentPiece = this.getNextPiece();
-      this.emit(GameEvents.NEXT_QUEUE_UPDATE, this.getState());
     }
     
     this.updateGhost();
-    this.emit(GameEvents.HOLD_UPDATE, this.getState());
-    this.emit(GameEvents.BOARD_UPDATE, this.getState());
+    this.emitStateUpdate();
     this.saveState();
   }
   
@@ -380,8 +393,6 @@ export class GameEngine extends EventEmitter {
     this.currentPiece = null;
     this.canHold = true;
     
-    this.emit(GameEvents.PIECE_LOCKED, this.getState());
-    
     // Check and clear lines
     this.clearLines();
   }
@@ -405,7 +416,7 @@ export class GameEngine extends EventEmitter {
     this.clearingLines = true;
     
     // Emit line clear event with callback
-    this.emit(GameEvents.LINES_CLEARED, {
+    this.emit(Config.EVENTS.LINES_CLEARED, {
       lines: linesToClear,
       callback: () => {
         this.updateBoardAfterClear(linesToClear);
@@ -432,13 +443,9 @@ export class GameEngine extends EventEmitter {
     if (this.lines >= this.level * Config.SCORING.LINES_PER_LEVEL) {
       this.level++;
       this.updateDropSpeed();
-      this.emit(GameEvents.LEVEL_UPDATE, this.getState());
     }
     
-    this.emit(GameEvents.SCORE_UPDATE, this.getState());
-    this.emit(GameEvents.STATS_UPDATE, this.getState());
-    this.emit(GameEvents.BOARD_UPDATE, this.getState());
-    
+    this.emitStateUpdate();
     this.clearingLines = false;
     this.saveState();
     this.spawnNextPiece();
@@ -458,13 +465,11 @@ export class GameEngine extends EventEmitter {
     this.currentPiece = this.getNextPiece();
     this.updateGhost();
     
-    this.emit(GameEvents.NEXT_QUEUE_UPDATE, this.getState());
-    
     if (!this.isValidPosition(this.currentPiece)) {
       this.endGame();
     } else {
-      this.emit(GameEvents.BOARD_UPDATE, this.getState());
-      this.emit(GameEvents.PIECE_SPAWNED, this.getState());
+      this.emitStateUpdate();
+      this.emit(Config.EVENTS.PIECE_SPAWNED, this.getState());
       this.saveState();
     }
   }
@@ -499,13 +504,13 @@ export class GameEngine extends EventEmitter {
         clearTimeout(this.lockTimer);
         this.lockTimer = null;
       }
-      this.emit(GameEvents.GAME_PAUSE);
+      this.emit(Config.EVENTS.GAME_PAUSE);
     } else {
       this.updateDropSpeed();
       if (this.currentPiece && !this.isValidPosition(this.currentPiece, 0, 1)) {
         this.resetLockDelay();
       }
-      this.emit(GameEvents.GAME_RESUME);
+      this.emit(Config.EVENTS.GAME_RESUME);
     }
     
     this.saveState();
@@ -522,7 +527,7 @@ export class GameEngine extends EventEmitter {
       this.lockTimer = null;
     }
     
-    this.clearSavedState();
+    this.storage.clearGameState();
     
     // Reset state
     this.score = 0;
@@ -544,11 +549,8 @@ export class GameEngine extends EventEmitter {
     this.updateGhost();
     
     // Emit start event
-    this.emit(GameEvents.GAME_START);
-    this.emit(GameEvents.STATS_UPDATE, this.getState());
-    this.emit(GameEvents.NEXT_QUEUE_UPDATE, this.getState());
-    this.emit(GameEvents.HOLD_UPDATE, this.getState());
-    this.emit(GameEvents.BOARD_UPDATE, this.getState());
+    this.emit(Config.EVENTS.GAME_START);
+    this.emitStateUpdate();
     
     // Start drop timer
     this.updateDropSpeed();
@@ -567,52 +569,28 @@ export class GameEngine extends EventEmitter {
       this.lockTimer = null;
     }
     
-    this.clearSavedState();
-    this.saveHighScore();
+    this.storage.clearGameState();
     
-    this.emit(GameEvents.GAME_OVER);
-  }
-  
-  // Score management
-  loadHighScore() {
-    const saved = localStorage.getItem(Config.STORAGE.HIGH_SCORE);
-    if (saved) this.highScore = parseInt(saved) || 0;
-  }
-  
-  saveHighScore() {
+    // Save high score if needed
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      localStorage.setItem(Config.STORAGE.HIGH_SCORE, this.highScore);
+      this.storage.saveHighScore(this.highScore);
     }
+    
+    this.emit(Config.EVENTS.GAME_OVER);
   }
   
   // State management
   saveState() {
-    if (this.gameOver) return;
-    
-    const saveData = {
-      board: this.board,
-      bag: this.bag,
-      nextBag: this.nextBag,
-      currentPiece: this.currentPiece,
-      heldPiece: this.heldPiece,
-      score: this.score,
-      level: this.level,
-      lines: this.lines,
-      canHold: this.canHold,
-      paused: this.paused
-    };
-    
-    localStorage.setItem(Config.STORAGE.GAME_STATE, JSON.stringify(saveData));
+    this.storage.saveGameState(this.getState());
   }
   
   loadState() {
-    const saved = localStorage.getItem(Config.STORAGE.GAME_STATE);
-    if (!saved) return false;
+    const savedState = this.storage.loadGameState();
+    if (!savedState) return false;
     
     try {
-      const saveData = JSON.parse(saved);
-      Object.assign(this, saveData);
+      Object.assign(this, savedState);
       
       // Restore timers if not paused
       if (!this.paused) {
@@ -629,8 +607,9 @@ export class GameEngine extends EventEmitter {
     }
   }
   
-  clearSavedState() {
-    localStorage.removeItem(Config.STORAGE.GAME_STATE);
+  // Emit unified state update
+  emitStateUpdate() {
+    this.emit(Config.EVENTS.STATE_UPDATE, this.getState());
   }
   
   // Get state for rendering
@@ -646,7 +625,8 @@ export class GameEngine extends EventEmitter {
       gameOver: this.gameOver,
       paused: this.paused,
       bag: this.bag,
-      nextBag: this.nextBag
+      nextBag: this.nextBag,
+      canHold: this.canHold
     };
   }
 }

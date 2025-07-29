@@ -1,9 +1,17 @@
 // ====== INPUT CONTROLLER ======
 
-import { GameEvents } from './events.js';
+import { Config } from './config.js';
 
-const DAS_DELAY = 150;
-const ARR_DELAY = 30;
+// Key mappings for different layouts
+const KEY_MAPPINGS = {
+  left: ['arrowleft', 'a', 'ф'],
+  right: ['arrowright', 'd', 'в'],
+  down: ['arrowdown', 's', 'ы'],
+  rotate: ['arrowup', 'w', 'ц'],
+  drop: [' '],
+  hold: ['c', 'с'],
+  pause: ['p', 'з']
+};
 
 export class InputController {
   constructor(gameEngine, renderer) {
@@ -15,33 +23,22 @@ export class InputController {
     
     // Keyboard state
     this.keysHeld = {};
-    
-    // Timers
     this.dasTimer = null;
     this.arrTimer = null;
     
     // Mouse control state
-    this.mouseState = {
-      boardRect: null,
-      history: [], // Array of {x: number, time: number}
-      smoothingWindow: 50 // milliseconds
-    };
+    this.mouseHistory = [];
+    this.boardRect = null;
     
     // Touch control state
-    this.touchState = {
-      startX: null,
-      startY: null,
-      currentX: null,
-      currentY: null,
-      pieceStartX: null,
-      isMoving: false,
-      touchId: null
-    };
+    this.touchStartX = null;
+    this.touchStartY = null;
+    this.pieceStartX = null;
     
     this.setupControls();
     
     // Subscribe to settings changes
-    this.engine.on(GameEvents.MOUSE_CONTROL_TOGGLE, (enabled) => {
+    this.engine.on(Config.EVENTS.MOUSE_CONTROL_TOGGLE, (enabled) => {
       this.setMouseControl(enabled);
     });
   }
@@ -52,78 +49,77 @@ export class InputController {
     this.setupTouch();
   }
   
-  // Keyboard controls
+  // Check if game accepts input
+  canAcceptInput() {
+    const state = this.engine.getState();
+    return state.currentPiece && !state.gameOver && !state.paused && 
+           !this.engine.clearingLines && !this.engine.hardDropping;
+  }
+  
+  // Get action from key
+  getActionFromKey(key) {
+    const lowerKey = key.toLowerCase();
+    for (const [action, keys] of Object.entries(KEY_MAPPINGS)) {
+      if (keys.includes(lowerKey)) return action;
+    }
+    return null;
+  }
+  
+  // ====== KEYBOARD CONTROLS ======
   setupKeyboard() {
     document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     document.addEventListener('keyup', (e) => this.handleKeyUp(e));
   }
   
   handleKeyDown(e) {
-    const key = e.key.toLowerCase();
-    if (this.keysHeld[key]) return;
-    this.keysHeld[key] = true;
+    const action = this.getActionFromKey(e.key);
+    if (!action) return;
     
-    const state = this.engine.getState();
-    if (state.gameOver || this.engine.clearingLines || this.engine.hardDropping) return;
+    if (this.keysHeld[action]) return;
+    this.keysHeld[action] = true;
     
-    switch(key) {
-      case 'arrowleft':
-      case 'a':
-      case 'ф': // Russian 'a'
-        e.preventDefault();
+    // Pause works even when game is over
+    if (action === 'pause') {
+      this.engine.togglePause();
+      return;
+    }
+    
+    if (!this.canAcceptInput()) return;
+    
+    e.preventDefault();
+    
+    switch(action) {
+      case 'left':
         this.startDAS('left');
         break;
-      case 'arrowright':
-      case 'd':
-      case 'в': // Russian 'd'
-        e.preventDefault();
+      case 'right':
         this.startDAS('right');
         break;
-      case 'arrowdown':
-      case 's':
-      case 'ы': // Russian 's'
-        e.preventDefault();
+      case 'down':
         this.engine.manualDropping = true;
         this.engine.dropPiece();
         break;
-      case 'arrowup':
-      case 'w':
-      case 'ц': // Russian 'w'
-        e.preventDefault();
+      case 'rotate':
         this.engine.rotatePiece();
         break;
-      case ' ':
-        e.preventDefault();
+      case 'drop':
         this.engine.hardDrop();
         break;
-      case 'c':
-      case 'с': // Russian 'c'
-        e.preventDefault();
+      case 'hold':
         this.engine.holdPiece();
-        break;
-      case 'p':
-      case 'з': // Russian 'p'
-        this.engine.togglePause();
         break;
     }
   }
   
   handleKeyUp(e) {
-    const key = e.key.toLowerCase();
-    this.keysHeld[key] = false;
+    const action = this.getActionFromKey(e.key);
+    if (!action) return;
     
-    if (['arrowleft', 'arrowright', 'a', 'd', 'ф', 'в'].includes(key)) {
-      if (this.dasTimer) {
-        clearTimeout(this.dasTimer);
-        this.dasTimer = null;
-      }
-      if (this.arrTimer) {
-        clearInterval(this.arrTimer);
-        this.arrTimer = null;
-      }
-    }
+    this.keysHeld[action] = false;
     
-    if (['arrowdown', 's', 'ы'].includes(key)) {
+    if (action === 'left' || action === 'right') {
+      this.clearDAS();
+    } else if (action === 'down') {
       this.engine.manualDropping = false;
     }
   }
@@ -132,6 +128,18 @@ export class InputController {
     const dx = dir === 'left' ? -1 : 1;
     this.engine.movePiece(dx, 0);
     
+    this.clearDAS();
+    
+    this.dasTimer = setTimeout(() => {
+      this.arrTimer = setInterval(() => {
+        if (this.canAcceptInput()) {
+          this.engine.movePiece(dx, 0);
+        }
+      }, Config.TIMING.ARR_DELAY);
+    }, Config.TIMING.DAS_DELAY);
+  }
+  
+  clearDAS() {
     if (this.dasTimer) {
       clearTimeout(this.dasTimer);
       this.dasTimer = null;
@@ -140,18 +148,9 @@ export class InputController {
       clearInterval(this.arrTimer);
       this.arrTimer = null;
     }
-    
-    this.dasTimer = setTimeout(() => {
-      this.arrTimer = setInterval(() => {
-        const state = this.engine.getState();
-        if (!state.paused && !this.engine.clearingLines) {
-          this.engine.movePiece(dx, 0);
-        }
-      }, ARR_DELAY);
-    }, DAS_DELAY);
   }
   
-  // Mouse controls
+  // ====== MOUSE CONTROLS ======
   setupMouse() {
     document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     document.addEventListener('mousedown', (e) => this.handleMouseClick(e));
@@ -180,51 +179,35 @@ export class InputController {
   }
   
   handleMouseMove(e) {
-    const state = this.engine.getState();
-    if (!this.mouseControlEnabled || !state.currentPiece || 
-        state.gameOver || state.paused) return;
-    
-    // Only control if mouse is over the board
+    if (!this.mouseControlEnabled || !this.canAcceptInput()) return;
     if (!this.isMouseOverBoard(e)) return;
     
     // Update board rect if needed
-    if (!this.mouseState.boardRect) {
-      this.mouseState.boardRect = this.renderer.getBoardRect();
+    if (!this.boardRect) {
+      this.boardRect = this.renderer.getBoardRect();
     }
     
-    // Add current position to history
-    const currentTime = Date.now();
-    const relativeX = e.clientX - this.mouseState.boardRect.left;
-    this.mouseState.history.push({ x: relativeX, time: currentTime });
+    // Add to history for smoothing
+    const now = Date.now();
+    const relativeX = e.clientX - this.boardRect.left;
+    this.mouseHistory.push({ x: relativeX, time: now });
     
-    // Remove positions older than smoothing window
-    const cutoffTime = currentTime - this.mouseState.smoothingWindow;
-    this.mouseState.history = this.mouseState.history.filter(entry => entry.time > cutoffTime);
+    // Keep only recent history
+    const cutoff = now - Config.TIMING.MOUSE_SMOOTHING_WINDOW;
+    this.mouseHistory = this.mouseHistory.filter(h => h.time > cutoff);
     
     // Calculate average position
-    let avgX = relativeX;
-    if (this.mouseState.history.length > 0) {
-      const sumX = this.mouseState.history.reduce((sum, entry) => sum + entry.x, 0);
-      avgX = sumX / this.mouseState.history.length;
-    }
+    const avgX = this.mouseHistory.reduce((sum, h) => sum + h.x, 0) / this.mouseHistory.length;
     
-    // Calculate which column based on averaged position
+    // Calculate target column
     const mouseCol = Math.floor(avgX / this.renderer.cellSize);
-    
-    // Get piece bounds to adjust for empty columns on the left
-    const bounds = this.engine.getPieceBounds(state.currentPiece);
-    
-    // Place piece so its leftmost block is one column to the left of the mouse
-    const targetX = mouseCol - bounds.left - 1;
+    const targetX = mouseCol - 1; // Place piece one column to the left
     
     this.engine.movePieceToX(targetX);
   }
   
   handleMouseClick(e) {
-    const state = this.engine.getState();
-    if (!this.mouseControlEnabled || state.gameOver || state.paused) return;
-    
-    // Only handle clicks on the board
+    if (!this.mouseControlEnabled || !this.canAcceptInput()) return;
     if (!this.isMouseOverBoard(e)) return;
     
     if (e.button === 0) { // Left click
@@ -236,10 +219,7 @@ export class InputController {
   }
   
   handleWheel(e) {
-    const state = this.engine.getState();
-    if (!this.mouseControlEnabled || state.gameOver || state.paused) return;
-    
-    // Only handle wheel on the board
+    if (!this.mouseControlEnabled || !this.canAcceptInput()) return;
     if (!this.isMouseOverBoard(e)) return;
     
     e.preventDefault();
@@ -251,7 +231,7 @@ export class InputController {
     }
   }
   
-  // Touch controls
+  // ====== TOUCH CONTROLS ======
   setupTouch() {
     const gameContainer = document.querySelector('.game-container');
     if (!gameContainer) return;
@@ -262,68 +242,50 @@ export class InputController {
   }
   
   handleTouchStart(e) {
-    const state = this.engine.getState();
-    if (state.gameOver || state.paused) return;
+    if (!this.canAcceptInput()) return;
     
     const touch = e.touches[0];
-    this.touchState.startX = touch.clientX;
-    this.touchState.startY = touch.clientY;
-    this.touchState.currentX = touch.clientX;
-    this.touchState.currentY = touch.clientY;
-    this.touchState.touchId = touch.identifier;
-    this.touchState.isMoving = false;
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
     
+    const state = this.engine.getState();
     if (state.currentPiece) {
-      this.touchState.pieceStartX = state.currentPiece.x;
+      this.pieceStartX = state.currentPiece.x;
     }
   }
   
   handleTouchMove(e) {
-    const state = this.engine.getState();
-    if (!this.touchState.startX || state.gameOver || state.paused) return;
-    
-    const touch = Array.from(e.touches).find(t => t.identifier === this.touchState.touchId);
-    if (!touch) return;
+    if (!this.touchStartX || !this.canAcceptInput()) return;
     
     e.preventDefault();
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - this.touchStartX;
     
-    this.touchState.currentX = touch.clientX;
-    this.touchState.currentY = touch.clientY;
-    
-    const deltaX = this.touchState.currentX - this.touchState.startX;
-    const deltaY = this.touchState.currentY - this.touchState.startY;
-    
-    // Determine if this is a swipe or drag
-    if (!this.touchState.isMoving && Math.abs(deltaX) > 10) {
-      this.touchState.isMoving = true;
-    }
-    
-    // Move piece horizontally if dragging
-    if (this.touchState.isMoving && state.currentPiece) {
-      // Calculate how many cells to move based on drag distance
-      const cellSize = window.innerWidth <= 400 ? 25 : 30; // Adjusted for narrow screens
+    // Simple drag to move piece
+    if (this.pieceStartX !== null) {
+      const cellSize = window.innerWidth <= 400 ? 22 : 28;
       const cellsMoved = Math.round(deltaX / cellSize);
-      const targetX = this.touchState.pieceStartX + cellsMoved;
+      const targetX = this.pieceStartX + cellsMoved;
       this.engine.movePieceToX(targetX);
     }
   }
   
   handleTouchEnd(e) {
-    const state = this.engine.getState();
-    if (!this.touchState.startX || state.gameOver || state.paused) return;
+    if (!this.touchStartX || !this.canAcceptInput()) return;
     
-    const deltaX = this.touchState.currentX - this.touchState.startX;
-    const deltaY = this.touchState.currentY - this.touchState.startY;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
     
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
     
-    // If it wasn't a drag movement, check for swipes/taps
-    if (!this.touchState.isMoving) {
-      if (absY > 50 && deltaY > 0 && absY > absX * 1.5) {
+    // Check for swipes/taps only if not dragging
+    if (absX < Config.TIMING.TOUCH_MOVE_THRESHOLD) {
+      if (absY > Config.TIMING.TOUCH_SWIPE_THRESHOLD && deltaY > 0) {
         // Swipe down - hard drop
         this.engine.hardDrop();
-      } else if (absY > 50 && deltaY < 0 && absY > absX * 1.5) {
+      } else if (absY > Config.TIMING.TOUCH_SWIPE_THRESHOLD && deltaY < 0) {
         // Swipe up - hold
         this.engine.holdPiece();
       } else if (absX < 10 && absY < 10) {
@@ -333,58 +295,37 @@ export class InputController {
     }
     
     // Reset touch state
-    this.touchState.startX = null;
-    this.touchState.startY = null;
-    this.touchState.currentX = null;
-    this.touchState.currentY = null;
-    this.touchState.pieceStartX = null;
-    this.touchState.isMoving = false;
-    this.touchState.touchId = null;
+    this.touchStartX = null;
+    this.touchStartY = null;
+    this.pieceStartX = null;
   }
   
   // Settings
   setMouseControl(enabled) {
     this.mouseControlEnabled = enabled;
     document.body.classList.toggle('mouse-control-enabled', enabled);
-    
-    // Clear mouse history when toggling
-    this.mouseState.history = [];
+    this.mouseHistory = [];
+    this.boardRect = null;
   }
   
   // Reset input state
   reset() {
-    // Clear timers
-    if (this.dasTimer) {
-      clearTimeout(this.dasTimer);
-      this.dasTimer = null;
-    }
-    if (this.arrTimer) {
-      clearInterval(this.arrTimer);
-      this.arrTimer = null;
-    }
-    
-    // Clear input states
+    this.clearDAS();
     this.keysHeld = {};
-    this.mouseState.history = [];
-    this.touchState = {
-      startX: null,
-      startY: null,
-      currentX: null,
-      currentY: null,
-      pieceStartX: null,
-      isMoving: false,
-      touchId: null
-    };
+    this.mouseHistory = [];
+    this.touchStartX = null;
+    this.touchStartY = null;
+    this.pieceStartX = null;
   }
   
   // Update board rect on resize
   updateBoardRect() {
-    this.mouseState.boardRect = null;
-    this.mouseState.history = [];
+    this.boardRect = null;
+    this.mouseHistory = [];
   }
   
   // Called when a new piece spawns
   onNewPiece() {
-    this.mouseState.history = [];
+    this.mouseHistory = [];
   }
 }
