@@ -17,29 +17,36 @@
   <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/assets/icons/favicon-16x16.png" />
   <link rel="manifest" href="https://qdiag.xyz/assets/icons/site.webmanifest" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <!-- Mobile menu button -->
+  <button id="menuToggle" class="menu-toggle" aria-label="Toggle Settings">☰</button>
+  
   <div id="container">
     <!-- Settings sidebar -->
     <div id="settings">
+      <button id="closeSettings" class="close-settings">×</button>
+      
       <div class="section">
-        <div class="setting">
-          <label>Size</label>
-          <div class="stepper">
-            <button id="sizeDown">−</button>
-            <span id="sizeVal">4</span>
-            <button id="sizeUp">+</button>
+        <div class="params-grid">
+          <div class="setting">
+            <label>Size</label>
+            <div class="stepper">
+              <button id="sizeDown">−</button>
+              <span id="sizeVal">4</span>
+              <button id="sizeUp">+</button>
+            </div>
           </div>
-        </div>
-        <div class="setting">
-          <label>Components</label>
-          <div class="stepper">
-            <button id="compDown">−</button>
-            <span id="compVal">7</span>
-            <button id="compUp">+</button>
+          <div class="setting">
+            <label>Terms</label>
+            <div class="stepper">
+              <button id="compDown">−</button>
+              <span id="compVal">7</span>
+              <button id="compUp">+</button>
+            </div>
           </div>
         </div>
       </div>
@@ -52,6 +59,10 @@
         <div class="checkbox">
           <input type="checkbox" id="showConflicts" />
           <label for="showConflicts">Show mod 2 conflicts</label>
+        </div>
+        <div class="checkbox">
+          <input type="checkbox" id="showLayers" />
+          <label for="showLayers">Show Layers Panel</label>
         </div>
       </div>
 
@@ -84,9 +95,12 @@
       </div>
     </div>
 
+    <!-- Settings overlay for mobile -->
+    <div id="settingsOverlay" class="settings-overlay"></div>
+
     <!-- 3D canvas -->
     <div id="view3d">
-      <div id="info">4×4×4 tensor</div>
+      <div id="info">4×4×4 tensor (7 terms)</div>
     </div>
 
     <!-- Layer thumbnails -->
@@ -99,6 +113,8 @@
   <!-- Three.js (global THREE) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+  <!-- Storage management (must come first) -->
+  <script src="./storage.js"></script>
   <!-- Visualization engine -->
   <script src="./render.js"></script>
   <!-- Flip/descent engine -->

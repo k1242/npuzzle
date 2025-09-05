@@ -1,39 +1,195 @@
-/* styles.css */
-/* All comments in code should be in English. */
+/* styles.css - Refactored with fixed layout */
 
 /* Reset and base */
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
+
+:root {
+  /* design tokens */
+  --c-bg: #fafafa;
+  --c-panel: #fff;
+  --c-border: #e0e0e0;
+  --c-border-2: #ddd;
+  --c-text: #333;
+  --c-muted: #666;
+  --c-primary: #6c63ff;
+  --c-primary-2: #5c53ef;
+  --c-conflict: #ff4444;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #fafafa;
-  color: #333;
+  background: var(--c-bg);
+  color: var(--c-text);
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main container */
+#container {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 1fr 120px;
+  grid-template-areas: 
+    "settings view3d"
+    "settings components";
+  height: 100vh;
+  width: 100vw;
+  background: var(--c-bg);
   overflow: hidden;
 }
 
-/* Layout grid */
-#container {
-  display: grid;
+/* When layers are visible */
+#container.layers-visible {
   grid-template-columns: 200px 1fr 120px;
-  grid-template-rows: 1fr auto;
-  height: 100vh;
-  gap: 1px;
-  background: #e0e0e0;
+  grid-template-areas: 
+    "settings view3d layers"
+    "settings components layers";
 }
 
 /* Settings panel */
 #settings {
-  grid-row: 1;
-  grid-column: 1;
-  background: #fff;
+  grid-area: settings;
+  background: var(--c-panel);
   padding: 15px;
   overflow-y: auto;
-  box-shadow: 1px 0 3px rgba(0,0,0,0.05);
+  border-right: 1px solid var(--c-border);
+  position: relative;
+  z-index: 999;
 }
 
-.setting { margin-bottom: 12px; }
+/* 3D view */
+#view3d {
+  grid-area: view3d;
+  background: #f5f5f5;
+  position: relative;
+  overflow: hidden;
+}
 
-.setting label {
+/* Layers panel */
+#layers {
+  grid-area: layers;
+  background: var(--c-panel);
+  padding: 20px 10px;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  border-left: 1px solid var(--c-border);
+}
+
+/* Show layers when container has class */
+#container.layers-visible #layers {
+  display: flex;
+}
+
+/* Components panel */
+#components {
+  grid-area: components;
+  background: var(--c-panel);
+  padding: 15px;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-top: 1px solid var(--c-border);
+  align-items: center;
+}
+
+/* Info label */
+#info {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 11px;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Mobile menu toggle */
+.menu-toggle {
+  display: none;
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1001;
+  width: 40px;
+  height: 40px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border-2);
+  border-radius: 4px;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.menu-toggle:hover { 
+  background: #f5f5f5; 
+}
+
+/* Close settings button */
+.close-settings {
+  display: none;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+}
+
+/* Settings overlay */
+.settings-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 998;
+  opacity: 0;
+}
+
+.settings-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
+/* Settings sections */
+.section {
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section:last-child { 
+  border-bottom: none; 
+}
+
+/* Two-column layout for size/components */
+.params-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.setting { 
+  margin-bottom: 12px; 
+}
+
+.setting label,
+.section-title {
   display: block;
   margin-bottom: 5px;
   font-size: 11px;
@@ -42,37 +198,22 @@ body {
   opacity: 0.6;
 }
 
-.section {
-  margin-bottom: 15px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.section:last-child { border-bottom: none; }
-
-.section-title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.6;
-  margin-bottom: 8px;
-}
-
+/* Controls */
 .stepper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 
 .stepper button {
   width: 24px;
   height: 24px;
-  border: 1px solid #ddd;
-  background: #fff;
-  color: #333;
+  border: 1px solid var(--c-border-2);
+  background: var(--c-panel);
+  color: var(--c-text);
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .stepper button:hover {
@@ -81,11 +222,12 @@ body {
 }
 
 .stepper span {
-  min-width: 30px;
+  min-width: 20px;
   text-align: center;
   font-weight: 500;
 }
 
+/* Checkboxes */
 .checkbox {
   display: flex;
   align-items: center;
@@ -103,14 +245,20 @@ body {
   font-size: 12px;
   cursor: pointer;
   opacity: 0.8;
-  margin-bottom: 0;
+  margin: 0;
   text-transform: none;
-  letter-spacing: 0;
+  letter-spacing: normal;
 }
 
-/* Preset columns */
-.preset-columns { display: flex; gap: 10px; }
-.preset-col { flex: 1; }
+/* Presets */
+.preset-columns { 
+  display: flex; 
+  gap: 10px; 
+}
+
+.preset-col { 
+  flex: 1; 
+}
 
 .preset-col-title {
   font-size: 10px;
@@ -126,39 +274,40 @@ button {
   width: 100%;
   padding: 6px;
   margin-top: 6px;
-  background: #fff;
-  border: 1px solid #ddd;
-  color: #333;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border-2);
+  color: var(--c-text);
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.2s;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-button:hover { background: #f5f5f5; border-color: #bbb; }
-
-button.primary {
-  border-color: #6c63ff;
-  color: #6c63ff;
-  background: #fff;
+button:hover { 
+  background: #f5f5f5; 
+  border-color: #bbb; 
 }
 
-button.primary:hover { background: #f5f4ff; }
+button.primary {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+}
+
+button.primary:hover { 
+  background: #f5f4ff; 
+}
+
+button.cta {
+  padding: 9px;
+  font-weight: 700;
+}
 
 button:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
-/* Reduce CTA emphasis */
-button.cta {
-  padding: 9px;
-  font-weight: 700;
-}
-
-/* Small hint text under buttons */
 .hint {
   font-size: 11px;
   line-height: 1.3;
@@ -166,28 +315,7 @@ button.cta {
   margin-top: 6px;
 }
 
-/* 3D view area */
-#view3d {
-  grid-row: 1;
-  grid-column: 2;
-  background: #f5f5f5;
-  position: relative;
-}
-
-/* Layers panel */
-#layers {
-  grid-row: 1;
-  grid-column: 3;
-  background: #fff;
-  padding: 20px 10px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-  box-shadow: -1px 0 3px rgba(0,0,0,0.05);
-}
-
+/* Layer thumbnails */
 .layer-cube {
   width: 80px;
   height: 80px;
@@ -195,15 +323,15 @@ button.cta {
   border: 2px solid transparent;
   border-radius: 4px;
   padding: 4px;
-  transition: all 0.2s;
-  position: relative;
-  background: #fff;
+  background: var(--c-panel);
 }
 
-.layer-cube:hover { border-color: #ddd; }
+.layer-cube:hover { 
+  border-color: #ddd; 
+}
 
 .layer-cube.active {
-  border-color: #6c63ff;
+  border-color: var(--c-primary);
   box-shadow: 0 0 0 1px rgba(108,99,255,0.2);
 }
 
@@ -213,21 +341,6 @@ button.cta {
   display: block;
 }
 
-/* Components panel */
-#components {
-  grid-row: 2;
-  grid-column: 1 / -1;
-  background: #fff;
-  padding: 15px;
-  display: flex;
-  gap: 20px;
-  overflow-x: auto;
-  border-top: 1px solid #e0e0e0;
-  height: 120px;
-  box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
-  align-items: center;
-}
-
 /* Vector labels */
 .vector-labels {
   display: flex;
@@ -235,8 +348,9 @@ button.cta {
   gap: 4px;
   font-size: 11px;
   padding-right: 10px;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid var(--c-border);
   margin-right: -10px;
+  flex-shrink: 0;
 }
 
 .vector-label-item {
@@ -256,59 +370,225 @@ button.cta {
   padding: 12px;
   background: #fafafa;
   border-radius: 4px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--c-border);
   cursor: pointer;
-  transition: all 0.2s;
   flex-shrink: 0;
 }
 
-.component:hover { border-color: #ccc; background: #f5f5f5; }
+.component:hover { 
+  border-color: #ccc; 
+  background: #f5f5f5; 
+}
 
 .component.active {
-  border-color: #6c63ff;
+  border-color: var(--c-primary);
   background: #f9f8ff;
   box-shadow: 0 0 0 1px rgba(108,99,255,0.2);
 }
 
-.vectors { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.vectors { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 4px; 
+}
 
-.vector { display: flex; gap: 2px; align-items: center; }
-.vector-values { display: flex; gap: 2px; }
+.vector { 
+  display: flex; 
+  gap: 2px; 
+}
 
-/* Bit cell */
+.vector-values { 
+  display: flex; 
+  gap: 2px; 
+}
+
+/* Bit cells */
 .bit {
   width: 18px;
   height: 18px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border-2);
   border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s;
   font-size: 10px;
   color: #666;
 }
 
-.bit.small { width: 14px; height: 14px; font-size: 8px; }
-.bit.tiny { width: 10px; height: 10px; font-size: 7px; }
+.bit.small { 
+  width: 14px; 
+  height: 14px; 
+  font-size: 8px; 
+}
+
+.bit.tiny { 
+  width: 10px; 
+  height: 10px; 
+  font-size: 7px; 
+}
 
 .bit.on {
-  background: #6c63ff;
+  background: var(--c-primary);
   border-color: #7c72ff;
   color: #fff;
 }
 
-.bit:hover { border-color: #aaa; }
+.bit:hover { 
+  border-color: #aaa; 
+}
 
-/* Info overlay */
-#info {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 11px;
-  opacity: 0.6;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+/* Mobile responsive */
+@media (max-width: 768px) {
+  #container,
+  #container.layers-visible {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 120px;
+    grid-template-areas: 
+      "view3d"
+      "components";
+  }
+  
+  .menu-toggle {
+    display: block;
+  }
+  
+  #settings {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    padding-top: 60px;
+    transition: transform 0.25s ease;
+    z-index: 999;
+  }
+  
+  #settings.active {
+    transform: translateX(0);
+  }
+  
+  .close-settings {
+    display: block;
+  }
+  
+  .settings-overlay {
+    display: block;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  
+  .settings-overlay.active {
+    pointer-events: auto;
+  }
+  
+  #layers {
+    display: none !important; /* Hidden by default on mobile */
+  }
+  
+  #container.layers-visible #layers {
+    display: flex !important;
+    position: fixed;
+    right: 10px;
+    top: 70px;
+    bottom: 130px;
+    width: 90px;
+    z-index: 997;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 10px 5px;
+  }
+  
+  #view3d {
+    grid-area: view3d;
+  }
+  
+  /* Info positioned to right of menu button */
+  #info {
+    top: 25px;
+    left: 65px;
+    font-size: 10px;
+  }
+  
+  #components {
+    grid-area: components;
+    height: 120px;
+    padding: 10px;
+    gap: 15px;
+  }
+
+  .component {
+    padding: 8px;
+  }
+  
+  .bit {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+  
+  .bit.small {
+    width: 12px;
+    height: 12px;
+    font-size: 7px;
+  }
+  
+  .bit.tiny {
+    width: 9px;
+    height: 9px;
+    font-size: 6px;
+  }
+  
+  .layer-cube {
+    width: 65px;
+    height: 65px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  #settings {
+    width: 240px;
+  }
+  
+  #components {
+    height: 110px;
+    padding: 8px;
+    gap: 12px;
+  }
+  
+  #container.layers-visible #layers {
+    width: 75px;
+    right: 5px;
+    bottom: 115px;
+    padding: 8px 4px;
+  }
+  
+  .layer-cube {
+    width: 55px;
+    height: 55px;
+  }
+  
+  .bit {
+    width: 14px;
+    height: 14px;
+    font-size: 8px;
+  }
+  
+  .bit.small {
+    width: 11px;
+    height: 11px;
+    font-size: 6px;
+  }
+  
+  .bit.tiny {
+    width: 8px;
+    height: 8px;
+    font-size: 5px;
+  }
 }
