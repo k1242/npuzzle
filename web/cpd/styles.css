@@ -1,6 +1,6 @@
-/* styles.css - Refactored with fixed layout */
+/* styles.css - Fixed mobile viewport issues */
 
-/* Reset and base */
+/* Reset and variables */
 * { 
   margin: 0; 
   padding: 0; 
@@ -8,61 +8,55 @@
 }
 
 :root {
-  /* design tokens */
-  --c-bg: #fafafa;
-  --c-panel: #fff;
-  --c-border: #e0e0e0;
-  --c-border-2: #ddd;
-  --c-text: #333;
-  --c-muted: #666;
-  --c-primary: #6c63ff;
-  --c-primary-2: #5c53ef;
-  --c-conflict: #ff4444;
+  --bg: #fafafa;
+  --panel: #fff;
+  --border: #e0e0e0;
+  --border-2: #ddd;
+  --text: #333;
+  --primary: #6c63ff;
+  --primary-2: #5c53ef;
+  --conflict: #ff4444;
+  
+  --spacing: 1.2rem;
+  --gap: 15px;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--c-bg);
-  color: var(--c-text);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
   overflow: hidden;
-  margin: 0;
-  padding: 0;
 }
 
-/* Main container */
+/* Main grid layout - improved mobile viewport handling */
 #container {
   display: grid;
-  grid-template-columns: 200px 1fr;
-  grid-template-rows: 1fr 120px;
-  grid-template-areas: 
-    "settings view3d"
-    "settings components";
+  grid-template: "settings view3d" 1fr 
+                 "settings components" 120px / 200px 1fr;
   height: 100vh;
+  /* Fallback for mobile browsers with dynamic viewport */
+  height: -webkit-fill-available;
+  height: 100dvh; /* Dynamic viewport height for modern browsers */
   width: 100vw;
-  background: var(--c-bg);
-  overflow: hidden;
+  position: fixed; /* Ensure it stays in viewport */
+  top: 0;
+  left: 0;
 }
 
-/* When layers are visible */
 #container.layers-visible {
-  grid-template-columns: 200px 1fr 120px;
-  grid-template-areas: 
-    "settings view3d layers"
-    "settings components layers";
+  grid-template: "settings view3d layers" 1fr 
+                 "settings components layers" 120px / 200px 1fr 120px;
 }
 
-/* Settings panel */
+/* Panels */
 #settings {
   grid-area: settings;
-  background: var(--c-panel);
-  padding: 15px;
+  background: var(--panel);
+  padding: var(--gap);
   overflow-y: auto;
-  border-right: 1px solid var(--c-border);
-  position: relative;
-  z-index: 999;
+  border-right: 1px solid var(--border);
 }
 
-/* 3D view */
 #view3d {
   grid-area: view3d;
   background: #f5f5f5;
@@ -70,38 +64,35 @@ body {
   overflow: hidden;
 }
 
-/* Layers panel */
 #layers {
   grid-area: layers;
-  background: var(--c-panel);
+  background: var(--panel);
   padding: 20px 10px;
-  overflow-y: auto;
   display: none;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
-  border-left: 1px solid var(--c-border);
+  gap: var(--gap);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
 }
 
-/* Show layers when container has class */
 #container.layers-visible #layers {
   display: flex;
 }
 
-/* Components panel */
 #components {
   grid-area: components;
-  background: var(--c-panel);
-  padding: 15px;
+  background: var(--panel);
+  padding: var(--gap);
   display: flex;
   gap: 20px;
   overflow-x: auto;
-  overflow-y: hidden;
-  border-top: 1px solid var(--c-border);
+  border-top: 1px solid var(--border);
   align-items: center;
+  /* Ensure scrolling works on mobile */
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Info label */
 #info {
   position: absolute;
   top: 20px;
@@ -112,63 +103,9 @@ body {
   letter-spacing: 1px;
 }
 
-/* Mobile menu toggle */
-.menu-toggle {
-  display: none;
-  position: fixed;
-  top: 15px;
-  left: 15px;
-  z-index: 1001;
-  width: 40px;
-  height: 40px;
-  background: var(--c-panel);
-  border: 1px solid var(--c-border-2);
-  border-radius: 4px;
-  font-size: 20px;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.menu-toggle:hover { 
-  background: #f5f5f5; 
-}
-
-/* Close settings button */
-.close-settings {
-  display: none;
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: transparent;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-}
-
-/* Settings overlay */
-.settings-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 998;
-  opacity: 0;
-}
-
-.settings-overlay.active {
-  display: block;
-  opacity: 1;
-}
-
 /* Settings sections */
 .section {
-  margin-bottom: 15px;
+  margin-bottom: var(--gap);
   padding-bottom: 12px;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -177,11 +114,10 @@ body {
   border-bottom: none; 
 }
 
-/* Two-column layout for size/components */
 .params-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: var(--gap);
 }
 
 .setting { 
@@ -208,9 +144,8 @@ body {
 .stepper button {
   width: 24px;
   height: 24px;
-  border: 1px solid var(--c-border-2);
-  background: var(--c-panel);
-  color: var(--c-text);
+  border: 1px solid var(--border-2);
+  background: var(--panel);
   border-radius: 3px;
   cursor: pointer;
   flex-shrink: 0;
@@ -274,9 +209,9 @@ button {
   width: 100%;
   padding: 6px;
   margin-top: 6px;
-  background: var(--c-panel);
-  border: 1px solid var(--c-border-2);
-  color: var(--c-text);
+  background: var(--panel);
+  border: 1px solid var(--border-2);
+  color: var(--text);
   border-radius: 3px;
   cursor: pointer;
   font-size: 11px;
@@ -290,8 +225,8 @@ button:hover {
 }
 
 button.primary {
-  border-color: var(--c-primary);
-  color: var(--c-primary);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 button.primary:hover { 
@@ -323,7 +258,7 @@ button:disabled {
   border: 2px solid transparent;
   border-radius: 4px;
   padding: 4px;
-  background: var(--c-panel);
+  background: var(--panel);
 }
 
 .layer-cube:hover { 
@@ -331,7 +266,7 @@ button:disabled {
 }
 
 .layer-cube.active {
-  border-color: var(--c-primary);
+  border-color: var(--primary);
   box-shadow: 0 0 0 1px rgba(108,99,255,0.2);
 }
 
@@ -341,14 +276,14 @@ button:disabled {
   display: block;
 }
 
-/* Vector labels */
+/* Components */
 .vector-labels {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
   padding-right: 10px;
-  border-right: 1px solid var(--c-border);
+  border-right: 1px solid var(--border);
   margin-right: -10px;
   flex-shrink: 0;
 }
@@ -362,7 +297,6 @@ button:disabled {
   text-transform: uppercase;
 }
 
-/* Component cards */
 .component {
   display: flex;
   flex-direction: column;
@@ -370,7 +304,7 @@ button:disabled {
   padding: 12px;
   background: #fafafa;
   border-radius: 4px;
-  border: 1px solid var(--c-border);
+  border: 1px solid var(--border);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -381,7 +315,7 @@ button:disabled {
 }
 
 .component.active {
-  border-color: var(--c-primary);
+  border-color: var(--primary);
   background: #f9f8ff;
   box-shadow: 0 0 0 1px rgba(108,99,255,0.2);
 }
@@ -406,8 +340,8 @@ button:disabled {
 .bit {
   width: 18px;
   height: 18px;
-  background: var(--c-panel);
-  border: 1px solid var(--c-border-2);
+  background: var(--panel);
+  border: 1px solid var(--border-2);
   border-radius: 2px;
   display: flex;
   align-items: center;
@@ -430,7 +364,7 @@ button:disabled {
 }
 
 .bit.on {
-  background: var(--c-primary);
+  background: var(--primary);
   border-color: #7c72ff;
   color: #fff;
 }
@@ -439,15 +373,75 @@ button:disabled {
   border-color: #aaa; 
 }
 
-/* Mobile responsive */
+/* Mobile menu */
+.menu-toggle {
+  display: none;
+  position: fixed;
+  top: var(--gap);
+  left: var(--gap);
+  z-index: 1001;
+  width: 40px;
+  height: 40px;
+  background: var(--panel);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.menu-toggle:hover { 
+  background: #f5f5f5; 
+}
+
+.close-settings {
+  display: none;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+}
+
+.settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.settings-overlay.active {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Mobile responsive with improved viewport handling */
 @media (max-width: 768px) {
+  :root {
+    --gap: 10px;
+  }
+
   #container,
   #container.layers-visible {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 120px;
-    grid-template-areas: 
-      "view3d"
-      "components";
+    grid-template: "view3d" 1fr "components" 100px / 1fr;
+    height: 100vh;
+    height: -webkit-fill-available;
+    height: 100dvh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
   
   .menu-toggle {
@@ -478,16 +472,10 @@ button:disabled {
   
   .settings-overlay {
     display: block;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-  }
-  
-  .settings-overlay.active {
-    pointer-events: auto;
   }
   
   #layers {
-    display: none !important; /* Hidden by default on mobile */
+    display: none !important;
   }
   
   #container.layers-visible #layers {
@@ -495,7 +483,7 @@ button:disabled {
     position: fixed;
     right: 10px;
     top: 70px;
-    bottom: 130px;
+    bottom: 110px; /* Adjusted to ensure it doesn't overlap components */
     width: 90px;
     z-index: 997;
     background: rgba(255, 255, 255, 0.95);
@@ -504,11 +492,6 @@ button:disabled {
     padding: 10px 5px;
   }
   
-  #view3d {
-    grid-area: view3d;
-  }
-  
-  /* Info positioned to right of menu button */
   #info {
     top: 25px;
     left: 65px;
@@ -516,79 +499,88 @@ button:disabled {
   }
   
   #components {
-    grid-area: components;
-    height: 120px;
-    padding: 10px;
-    gap: 15px;
+    height: 100px; /* Reduced height for better fit */
+    padding: 8px var(--gap);
+    gap: var(--gap);
+    /* Ensure it's always visible at bottom */
+    position: relative;
+    z-index: 10;
   }
 
   .component {
     padding: 8px;
   }
   
-  .bit {
-    width: 16px;
-    height: 16px;
-    font-size: 9px;
-  }
+  .bit { width: 16px; height: 16px; font-size: 9px; }
+  .bit.small { width: 12px; height: 12px; font-size: 7px; }
+  .bit.tiny { width: 9px; height: 9px; font-size: 6px; }
   
-  .bit.small {
-    width: 12px;
-    height: 12px;
-    font-size: 7px;
-  }
-  
-  .bit.tiny {
-    width: 9px;
-    height: 9px;
-    font-size: 6px;
-  }
-  
-  .layer-cube {
-    width: 65px;
-    height: 65px;
-  }
+  .layer-cube { width: 65px; height: 65px; }
 }
 
-/* Small mobile */
 @media (max-width: 480px) {
-  #settings {
-    width: 240px;
+  #container,
+  #container.layers-visible {
+    grid-template: "view3d" 1fr "components" 90px / 1fr; /* Reduced height for small screens */
   }
   
-  #components {
-    height: 110px;
-    padding: 8px;
-    gap: 12px;
+  #settings { width: 240px; }
+  
+  #components { 
+    height: 90px; 
+    padding: 6px 8px; 
+    gap: 10px; 
   }
   
   #container.layers-visible #layers {
     width: 75px;
     right: 5px;
-    bottom: 115px;
+    bottom: 95px; /* Adjusted for smaller components panel */
     padding: 8px 4px;
   }
   
-  .layer-cube {
-    width: 55px;
-    height: 55px;
+  .layer-cube { width: 55px; height: 55px; }
+  .component { padding: 6px; }
+  .bit { width: 14px; height: 14px; font-size: 8px; }
+  .bit.small { width: 11px; height: 11px; font-size: 6px; }
+  .bit.tiny { width: 8px; height: 8px; font-size: 5px; }
+  
+  /* Ensure vector labels fit */
+  .vector-labels {
+    padding-right: 6px;
+    margin-right: -6px;
   }
   
-  .bit {
-    width: 14px;
-    height: 14px;
-    font-size: 8px;
+  .vector-label-item {
+    height: 16px;
+    font-size: 10px;
+  }
+}
+
+/* iOS specific fixes for viewport */
+@supports (-webkit-touch-callout: none) {
+  #container {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Ensure components panel is always accessible */
+@media (max-height: 500px) {
+  #container,
+  #container.layers-visible {
+    grid-template: "view3d" 1fr "components" 80px / 1fr;
   }
   
-  .bit.small {
-    width: 11px;
-    height: 11px;
-    font-size: 6px;
+  #components {
+    height: 80px;
+    padding: 5px 8px;
   }
   
-  .bit.tiny {
-    width: 8px;
-    height: 8px;
-    font-size: 5px;
+  .component {
+    padding: 5px;
   }
+  
+  .bit { width: 12px; height: 12px; font-size: 7px; }
+  .bit.small { width: 10px; height: 10px; font-size: 6px; }
+  .bit.tiny { width: 8px; height: 8px; font-size: 5px; }
 }

@@ -1,181 +1,143 @@
-// render.js - Refactored rendering engine
-// Clean architecture for 3D visualization and layer thumbnails
-
-/* global THREE */
+// render.js - Simplified rendering engine
+/* global THREE, Storage */
 
 class RenderEngine {
-  constructor(viewContainer, layersContainer) {
-    this.viewContainer = viewContainer;
-    this.layersContainer = layersContainer;
+  constructor(viewEl, layersEl) {
+    this.viewEl = viewEl;
+    this.layersEl = layersEl;
 
-    // Three.js core
+    // Three.js objects
     this.scene = null;
     this.camera = null;
     this.renderer = null;
     this.tensorGroup = null;
     this.cubes = [];
 
-    // Interaction state
-    this.mouseDown = false;
-    this.mouseX = 0;
-    this.mouseY = 0;
-    this.touchStartX = 0;
-    this.touchStartY = 0;
-    this.initialDistance = 0;
+    // Interaction state  
+    this.dragStart = { x: 0, y: 0 };
+    this.dragging = false;
+    this.pinchDist = 0;
 
-    // Visualization settings
-    this.autoRotate = true;
-    this.activeLayer = -1;
-    this.showConflicts = false;
-
-    // Bind animation loop
-    this._animate = this._animate.bind(this);
+    this.init();
   }
-
-  // -------------------------- Initialization --------------------------
 
   init() {
-    this._initScene();
-    this._initLights();
-    this._initControls();
-    requestAnimationFrame(this._animate);
-  }
-
-  _initScene() {
     // Scene setup
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xf5f5f5);
 
-    // Camera setup
-    const width = this.viewContainer.clientWidth;
-    const height = this.viewContainer.clientHeight;
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    this.camera.position.set(10, 10, 10);
+    // Camera
+    const aspect = this.viewEl.clientWidth / this.viewEl.clientHeight;
+    this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+    const dist = Storage.cameraDistance || 17.3;
+    this.camera.position.set(dist * 0.58, dist * 0.58, dist * 0.58);
     this.camera.lookAt(0, 0, 0);
 
-    // Renderer setup
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(width, height);
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setSize(this.viewEl.clientWidth, this.viewEl.clientHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.viewContainer.appendChild(this.renderer.domElement);
-  }
+    this.viewEl.appendChild(this.renderer.domElement);
 
-  _initLights() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    this.scene.add(ambientLight);
-
+    // Lights
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dir1 = new THREE.DirectionalLight(0xffffff, 0.4);
     dir1.position.set(5, 10, 5);
     this.scene.add(dir1);
-
     const dir2 = new THREE.DirectionalLight(0xffffff, 0.2);
     dir2.position.set(-5, -5, -5);
     this.scene.add(dir2);
+
+    this.setupControls();
+    requestAnimationFrame(() => this.animate());
   }
 
-  _initControls() {
-    this._initMouseControls();
-    this._initTouchControls();
-  }
+  setupControls() {
+    const canvas = this.renderer.domElement;
 
-  _initMouseControls() {
-    this.viewContainer.addEventListener('mousedown', (e) => {
-      this.mouseDown = true;
-      this.mouseX = e.clientX;
-      this.mouseY = e.clientY;
-    });
+    // Unified pointer handling
+    const getPointer = (e) => {
+      if (e.touches) {
+        if (e.touches.length === 1) return { x: e.touches[0].clientX, y: e.touches[0].clientY, type: 'drag' };
+        if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          return { dist: Math.sqrt(dx * dx + dy * dy), type: 'pinch' };
+        }
+        return null;
+      }
+      return { x: e.clientX, y: e.clientY, type: 'drag' };
+    };
 
-    this.viewContainer.addEventListener('mousemove', (e) => {
-      if (!this.mouseDown || !this.tensorGroup) return;
-      const dx = e.clientX - this.mouseX;
-      const dy = e.clientY - this.mouseY;
-      this.tensorGroup.rotation.y += dx * 0.01;
-      this.tensorGroup.rotation.x += dy * 0.01;
-      this.mouseX = e.clientX;
-      this.mouseY = e.clientY;
-    });
+    // Start interaction
+    const handleStart = (e) => {
+      const ptr = getPointer(e);
+      if (!ptr) return;
+      
+      if (ptr.type === 'drag') {
+        this.dragging = true;
+        this.dragStart = { x: ptr.x, y: ptr.y };
+      } else if (ptr.type === 'pinch') {
+        this.pinchDist = ptr.dist;
+      }
+    };
 
-    const endDrag = () => { this.mouseDown = false; };
-    this.viewContainer.addEventListener('mouseup', endDrag);
-    this.viewContainer.addEventListener('mouseleave', endDrag);
+    // Move interaction
+    const handleMove = (e) => {
+      if (!this.tensorGroup) return;
+      const ptr = getPointer(e);
+      if (!ptr) return;
 
-    this.viewContainer.addEventListener('wheel', (e) => {
+      if (ptr.type === 'drag' && this.dragging) {
+        const dx = ptr.x - this.dragStart.x;
+        const dy = ptr.y - this.dragStart.y;
+        this.tensorGroup.rotation.y += dx * 0.01;
+        this.tensorGroup.rotation.x += dy * 0.01;
+        this.dragStart = { x: ptr.x, y: ptr.y };
+      } else if (ptr.type === 'pinch' && this.pinchDist) {
+        const scale = ptr.dist / this.pinchDist;
+        this.camera.position.multiplyScalar(scale);
+        Storage.cameraDistance = this.camera.position.length();
+        this.pinchDist = ptr.dist;
+      }
+    };
+
+    // End interaction
+    const handleEnd = (e) => {
+      if (!e.touches || e.touches.length === 0) {
+        this.dragging = false;
+        this.pinchDist = 0;
+      }
+    };
+
+    // Wheel zoom
+    const handleWheel = (e) => {
       e.preventDefault();
       const scale = e.deltaY > 0 ? 0.9 : 1.1;
       this.camera.position.multiplyScalar(scale);
+      Storage.cameraDistance = this.camera.position.length();
+    };
 
-      if (window.Storage) {
-        window.Storage.set('cameraPosition', this.getCameraPosition());
-      }
-    }, { passive: false });
+    // Attach listeners
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('mouseleave', handleEnd);
+    canvas.addEventListener('touchstart', handleStart, { passive: true });
+    canvas.addEventListener('touchmove', handleMove, { passive: true });
+    canvas.addEventListener('touchend', handleEnd, { passive: true });
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
   }
 
-  _initTouchControls() {
-    this.viewContainer.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        this.touchStartX = touch.clientX;
-        this.touchStartY = touch.clientY;
-      } else if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        this.initialDistance = Math.sqrt(dx * dx + dy * dy);
-      }
-    }, { passive: false });
-
-    this.viewContainer.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (!this.tensorGroup) return;
-
-      if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        const dx = touch.clientX - this.touchStartX;
-        const dy = touch.clientY - this.touchStartY;
-        
-        this.tensorGroup.rotation.y += dx * 0.01;
-        this.tensorGroup.rotation.x += dy * 0.01;
-        
-        this.touchStartX = touch.clientX;
-        this.touchStartY = touch.clientY;
-      } else if (e.touches.length === 2 && this.initialDistance > 0) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const currentDistance = Math.sqrt(dx * dx + dy * dy);
-        
-        const scale = currentDistance / this.initialDistance;
-        this.camera.position.multiplyScalar(scale);
-        this.initialDistance = currentDistance;
-
-        if (window.Storage) {
-          window.Storage.set('cameraPosition', this.getCameraPosition());
-        }
-      }
-    }, { passive: false });
-
-    this.viewContainer.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      if (e.touches.length === 0) {
-        this.initialDistance = 0;
-      }
-    }, { passive: false });
-  }
-
-  // -------------------------- Animation Loop --------------------------
-
-  _animate() {
-    if (this.tensorGroup && this.activeLayer === -1 && this.autoRotate) {
+  animate() {
+    if (this.tensorGroup && Storage.activeLayer === -1 && Storage.autoRotate) {
       this.tensorGroup.rotation.y += 0.002;
     }
     this.renderer.render(this.scene, this.camera);
-    requestAnimationFrame(this._animate);
+    requestAnimationFrame(() => this.animate());
   }
 
-  // -------------------------- Tensor Building --------------------------
-
   build(n, tensor, conflicts) {
-    // Remove previous group
     if (this.tensorGroup) {
       this.scene.remove(this.tensorGroup);
     }
@@ -190,47 +152,45 @@ class RenderEngine {
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         for (let k = 0; k < n; k++) {
-          const cube = this._createCube(
-            geometry,
-            tensor[i][j][k],
+          const cube = this.createCube(
+            geometry, 
+            tensor[i][j][k], 
             conflicts[i][j][k],
             offset + i * spacing,
             offset + j * spacing,
-            offset + k * spacing
+            offset + k * spacing,
+            k
           );
-          
-          cube.userData = { i, j, k, active: tensor[i][j][k], conflict: conflicts[i][j][k] };
           this.tensorGroup.add(cube);
           this.cubes.push(cube);
         }
       }
     }
 
-    // Set initial rotation
-    this.tensorGroup.rotation.x = -Math.PI / 6;
-    this.tensorGroup.rotation.y = Math.PI / 4;
-
+    this.tensorGroup.rotation.set(-Math.PI / 6, Math.PI / 4, 0);
     this.scene.add(this.tensorGroup);
   }
 
-  _createCube(geometry, active, conflict, x, y, z) {
-    const { color, emissive, opacity, edgeColor } = this._getCubeStyle(active, conflict);
-
+  createCube(geometry, active, conflict, x, y, z, layer) {
+    const showConflicts = Storage.showConflicts;
+    const isConflict = showConflicts && conflict;
+    
     const material = new THREE.MeshPhongMaterial({
-      color,
+      color: isConflict ? 0xff4444 : (active ? 0x6c63ff : 0xe0e0e0),
       transparent: true,
-      opacity,
-      emissive,
+      opacity: active || isConflict ? 0.85 : 0.2,
+      emissive: active || isConflict ? (isConflict ? 0xff4444 : 0x6c63ff) : 0x000000,
       emissiveIntensity: 0.1
     });
 
     const cube = new THREE.Mesh(geometry, material);
     cube.position.set(x, y, z);
+    cube.userData = { layer, active, conflict };
 
     // Add edges
     const edges = new THREE.EdgesGeometry(geometry);
     const lineMaterial = new THREE.LineBasicMaterial({
-      color: edgeColor,
+      color: isConflict ? 0xdd3333 : (active ? 0x5c53ef : 0xcccccc),
       transparent: true,
       opacity: 0.6
     });
@@ -240,33 +200,6 @@ class RenderEngine {
     return cube;
   }
 
-  _getCubeStyle(active, conflict) {
-    if (this.showConflicts && conflict) {
-      return {
-        color: 0xff4444,
-        emissive: 0xff4444,
-        opacity: 0.85,
-        edgeColor: 0xdd3333
-      };
-    } else if (active) {
-      return {
-        color: 0x6c63ff,
-        emissive: 0x6c63ff,
-        opacity: 0.85,
-        edgeColor: 0x5c53ef
-      };
-    } else {
-      return {
-        color: 0xe0e0e0,
-        emissive: 0x000000,
-        opacity: 0.2,
-        edgeColor: 0xcccccc
-      };
-    }
-  }
-
-  // -------------------------- Tensor Update --------------------------
-
   update(n, tensor, conflicts) {
     let idx = 0;
     for (let i = 0; i < n; i++) {
@@ -275,118 +208,73 @@ class RenderEngine {
           const cube = this.cubes[idx++];
           const active = !!tensor[i][j][k];
           const conflict = !!conflicts[i][j][k];
+          const showConflicts = Storage.showConflicts;
+          const isConflict = showConflicts && conflict;
+          const activeLayer = Storage.activeLayer;
 
-          this._updateCube(cube, active, conflict, k);
+          // Update material
+          cube.material.color.setHex(isConflict ? 0xff4444 : (active ? 0x6c63ff : 0xe0e0e0));
+          cube.material.emissive.setHex(active || isConflict ? (isConflict ? 0xff4444 : 0x6c63ff) : 0x000000);
+          
+          // Update opacity based on layer
+          if (activeLayer === -1) {
+            cube.material.opacity = active || isConflict ? 0.85 : 0.2;
+          } else {
+            const isActiveLayer = k === activeLayer;
+            cube.material.opacity = isActiveLayer 
+              ? (active || isConflict ? 0.9 : 0.25)
+              : (active || isConflict ? 0.2 : 0.04);
+          }
+
+          // Update edges
+          const edge = cube.children[0];
+          if (edge) {
+            edge.material.color.setHex(isConflict ? 0xdd3333 : (active ? 0x5c53ef : 0xcccccc));
+            edge.material.opacity = (activeLayer === -1 || k === activeLayer) ? 0.6 : 0.2;
+          }
+
+          cube.userData = { layer: k, active, conflict };
         }
       }
     }
   }
 
-  _updateCube(cube, active, conflict, layerK) {
-    const { color, emissive, opacity, edgeColor } = this._getCubeStyle(active, conflict);
-    
-    cube.material.color.setHex(color);
-    cube.material.emissive.setHex(emissive);
-
-    // Adjust opacity based on active layer
-    if (this.activeLayer === -1) {
-      cube.material.opacity = opacity;
-    } else {
-      cube.material.opacity = (layerK === this.activeLayer) 
-        ? (active || (this.showConflicts && conflict) ? 0.9 : 0.25)
-        : (active || (this.showConflicts && conflict) ? 0.2 : 0.04);
-    }
-
-    // Update edge styling
-    const edgeMesh = cube.children[0];
-    if (edgeMesh) {
-      edgeMesh.material.color.setHex(edgeColor);
-      edgeMesh.material.opacity = (this.activeLayer === -1 || layerK === this.activeLayer) ? 0.6 : 0.2;
-    }
-  }
-
-  // -------------------------- Layer Thumbnails --------------------------
-
-  drawLayers(n, tensor, conflicts, onLayerClick) {
-    this.layersContainer.innerHTML = '';
+  drawLayers(n, tensor, conflicts, onClick) {
+    this.layersEl.innerHTML = '';
     
     for (let k = 0; k < n; k++) {
-      const wrapper = this._createLayerThumbnail(n, tensor, conflicts, k);
-      
-      wrapper.addEventListener('click', () => {
-        const newActive = (this.activeLayer === k) ? -1 : k;
-        if (onLayerClick) onLayerClick(newActive);
-      });
-      
-      this.layersContainer.appendChild(wrapper);
-    }
-  }
+      const wrapper = document.createElement('div');
+      wrapper.className = `layer-cube ${Storage.activeLayer === k ? 'active' : ''}`;
+      wrapper.onclick = () => onClick(k);
 
-  _createLayerThumbnail(n, tensor, conflicts, k) {
-    const wrapper = document.createElement('div');
-    wrapper.className = `layer-cube ${this.activeLayer === k ? 'active' : ''}`;
+      const canvas = document.createElement('canvas');
+      canvas.className = 'layer-canvas';
+      canvas.width = canvas.height = 80;
 
-    const canvas = document.createElement('canvas');
-    canvas.className = 'layer-canvas';
-    canvas.width = 80;
-    canvas.height = 80;
+      const ctx = canvas.getContext('2d');
+      const cell = 80 / n;
 
-    const ctx = canvas.getContext('2d');
-    const cell = 80 / n;
-
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        if (this.showConflicts && conflicts[i][j][k]) {
-          ctx.fillStyle = '#ff4444';
-        } else if (tensor[i][j][k]) {
-          ctx.fillStyle = '#6c63ff';
-        } else {
-          ctx.fillStyle = '#e0e0e0';
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          ctx.fillStyle = (Storage.showConflicts && conflicts[i][j][k]) ? '#ff4444' 
+                        : tensor[i][j][k] ? '#6c63ff' 
+                        : '#e0e0e0';
+          ctx.fillRect(i * cell, j * cell, cell - 1, cell - 1);
         }
-        ctx.fillRect(i * cell, j * cell, cell - 1, cell - 1);
       }
+
+      wrapper.appendChild(canvas);
+      this.layersEl.appendChild(wrapper);
     }
-
-    wrapper.appendChild(canvas);
-    return wrapper;
-  }
-
-  // -------------------------- Settings --------------------------
-
-  setAutoRotate(flag) { 
-    this.autoRotate = !!flag; 
-  }
-
-  setActiveLayer(k) { 
-    this.activeLayer = k; 
-  }
-
-  setShowConflicts(flag) { 
-    this.showConflicts = !!flag; 
   }
 
   handleResize() {
-    const width = this.viewContainer.clientWidth;
-    const height = this.viewContainer.clientHeight;
+    const width = this.viewEl.clientWidth;
+    const height = this.viewEl.clientHeight;
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
   }
-
-  getCameraPosition() {
-    return {
-      x: this.camera.position.x,
-      y: this.camera.position.y,
-      z: this.camera.position.z
-    };
-  }
-
-  setCameraPosition(pos) {
-    if (pos && pos.x && pos.y && pos.z) {
-      this.camera.position.set(pos.x, pos.y, pos.z);
-    }
-  }
 }
 
-// Export to global scope
 window.RenderEngine = RenderEngine;

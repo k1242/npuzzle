@@ -1,67 +1,49 @@
-// script.js - Fixed initialization and visibility issues
+// script.js - Simplified main application logic
+/* global Storage, RenderEngine, Flip, PRESETS */
 
-// Engine will be initialized after DOM ready
 let engine = null;
 
-// Presets data (unchanged)
-const PRESETS = {
-  naive2x2: {
-    n: 4, r: 8,
-    u: [[1,0,0,0],[1,0,0,0],[0,1,0,0],[0,1,0,0],[0,0,1,0],[0,0,1,0],[0,0,0,1],[0,0,0,1]],
-    v: [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],
-    w: [[1,0,0,0],[0,0,1,0],[1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1],[0,1,0,0],[0,0,0,1]]
-  },
-  strassen: {
-    n: 4, r: 7,
-    u: [[1,0,0,1],[0,0,1,1],[1,0,0,0],[0,1,0,1],[1,1,0,0],[0,0,0,1],[1,0,1,0]],
-    v: [[1,0,0,1],[1,0,0,0],[0,1,0,1],[0,0,1,1],[0,0,0,1],[1,0,1,0],[1,1,0,0]],
-    w: [[1,0,0,1],[0,1,0,1],[0,0,1,1],[1,0,0,0],[1,0,1,0],[1,1,0,0],[0,0,0,1]]
-  }
-};
-
-// Helper functions
-const isMobile = () => window.innerWidth <= 768;
-
+// Initialize empty components
 function initComponents() {
-  const n = Storage.get('n');
-  const r = Storage.get('r');
-  const components = Array(r).fill(null).map(() => ({
+  const { n, r } = Storage;
+  Storage.components = Array(r).fill(null).map(() => ({
     u: Array(n).fill(0),
     v: Array(n).fill(0),
     w: Array(n).fill(0)
   }));
-  Storage.set('components', components);
 }
 
-function calcTensorWithConflicts() {
-  const n = Storage.get('n');
-  const components = Storage.get('components');
+// Calculate tensor and conflicts from components
+function calcTensor() {
+  const { n, components } = Storage;
   
   const counts = Array.from({ length: n }, () =>
     Array.from({ length: n }, () => Array(n).fill(0))
   );
 
-  for (const comp of components) {
+  // Count contributions
+  for (const c of components) {
     for (let i = 0; i < n; i++) {
-      if (!comp.u[i]) continue;
+      if (!c.u[i]) continue;
       for (let j = 0; j < n; j++) {
-        if (!comp.v[j]) continue;
+        if (!c.v[j]) continue;
         for (let k = 0; k < n; k++) {
-          if (comp.w[k]) counts[i][j][k]++;
+          if (c.w[k]) counts[i][j][k]++;
         }
       }
     }
   }
 
-  const tensor = Array.from({ length: n }, () =>
-    Array.from({ length: n }, () => Array(n).fill(0))
-  );
-  const conflicts = Array.from({ length: n }, () =>
-    Array.from({ length: n }, () => Array(n).fill(0))
-  );
-
+  // Build tensor and conflicts
+  const tensor = [];
+  const conflicts = [];
+  
   for (let i = 0; i < n; i++) {
+    tensor[i] = [];
+    conflicts[i] = [];
     for (let j = 0; j < n; j++) {
+      tensor[i][j] = [];
+      conflicts[i][j] = [];
       for (let k = 0; k < n; k++) {
         const c = counts[i][j][k];
         tensor[i][j][k] = c % 2;
@@ -73,9 +55,10 @@ function calcTensorWithConflicts() {
   return { tensor, conflicts };
 }
 
-function updateVisualization(rebuild = false) {
-  const { tensor, conflicts } = calcTensorWithConflicts();
-  const n = Storage.get('n');
+// Update all visualizations
+function updateViz(rebuild = false) {
+  const { tensor, conflicts } = calcTensor();
+  const { n } = Storage;
   
   if (rebuild) {
     engine.build(n, tensor, conflicts);
@@ -84,84 +67,49 @@ function updateVisualization(rebuild = false) {
   }
   
   renderComponents();
-  renderLayers();
+  renderLayers(tensor, conflicts);
+  updateInfo();
 }
 
-// Updated updateInfo to show term count
+// Update info label
 function updateInfo() {
-  const n = Storage.get('n');
-  const r = Storage.get('r');
+  const { n, components } = Storage;
   
   // Count non-empty terms
-  const components = Storage.get('components');
-  let nonEmptyCount = 0;
-  
-  if (components) {
-    for (const comp of components) {
-      // Check if at least one vector in the component is non-zero
-      const hasU = comp.u.some(bit => bit === 1);
-      const hasV = comp.v.some(bit => bit === 1);
-      const hasW = comp.w.some(bit => bit === 1);
-      if (hasU && hasV && hasW) {
-        nonEmptyCount++;
-      }
+  let nonEmpty = 0;
+  for (const c of components) {
+    if (c.u.some(b => b) && c.v.some(b => b) && c.w.some(b => b)) {
+      nonEmpty++;
     }
   }
   
-  document.getElementById('info').textContent = `${n}×${n}×${n} tensor (${nonEmptyCount} terms)`;
+  document.getElementById('info').textContent = `${n}×${n}×${n} tensor (${nonEmpty} terms)`;
   document.getElementById('sizeVal').textContent = n;
-  document.getElementById('compVal').textContent = r;
-}
-
-/** Update layers visibility - Fixed version */
-function updateLayersVisibility() {
-  const showLayers = Storage.get('showLayers');
-  const container = document.getElementById('container');
-  
-  console.log('Updating layers visibility:', showLayers);
-
-  if (container) {
-    if (showLayers) {
-      container.classList.add('layers-visible');
-    } else {
-      container.classList.remove('layers-visible');
-    }
-  }
-  
-  // Immediate resize
-  if (engine) {
-    engine.handleResize();
-  }
+  document.getElementById('compVal').textContent = Storage.r;
 }
 
 // Render component cards
 function renderComponents() {
   const container = document.getElementById('components');
-  const components = Storage.get('components');
-  const n = Storage.get('n');
-  const activeComponent = Storage.get('activeComponent');
+  const { components, n, activeComponent } = Storage;
   
   container.innerHTML = '';
 
-  const labelsDiv = document.createElement('div');
-  labelsDiv.className = 'vector-labels';
-  ['u', 'v', 'w'].forEach(label => {
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'vector-label-item';
-    labelDiv.textContent = label;
-    labelsDiv.appendChild(labelDiv);
-  });
-  container.appendChild(labelsDiv);
+  // Vector labels
+  const labels = document.createElement('div');
+  labels.className = 'vector-labels';
+  labels.innerHTML = '<div class="vector-label-item">u</div><div class="vector-label-item">v</div><div class="vector-label-item">w</div>';
+  container.appendChild(labels);
 
-  let bitSizeClass = '';
-  if (n > 8) bitSizeClass = 'tiny';
-  else if (n > 5) bitSizeClass = 'small';
+  // Bit size class
+  const bitClass = n > 8 ? 'tiny' : n > 5 ? 'small' : '';
 
+  // Component cards
   components.forEach((comp, idx) => {
     const card = document.createElement('div');
     card.className = `component ${idx === activeComponent ? 'active' : ''}`;
     card.onclick = () => {
-      Storage.set('activeComponent', idx);
+      Storage.activeComponent = idx;
       renderComponents();
     };
 
@@ -171,20 +119,18 @@ function renderComponents() {
     ['u', 'v', 'w'].forEach(vec => {
       const vectorDiv = document.createElement('div');
       vectorDiv.className = 'vector';
-
       const values = document.createElement('div');
       values.className = 'vector-values';
 
       for (let i = 0; i < n; i++) {
         const bit = document.createElement('div');
-        bit.className = `bit ${bitSizeClass} ${comp[vec][i] ? 'on' : ''}`;
+        bit.className = `bit ${bitClass} ${comp[vec][i] ? 'on' : ''}`;
         bit.textContent = comp[vec][i] ? '1' : '0';
         bit.onclick = (e) => {
           e.stopPropagation();
           comp[vec][i] ^= 1;
-          Storage.set('components', components);
-          updateVisualization();
-          updateInfo(); // Update term count when bits change
+          Storage.components = components;
+          updateViz();
         };
         values.appendChild(bit);
       }
@@ -198,412 +144,216 @@ function renderComponents() {
   });
 }
 
-function renderLayers() {
-  const { tensor, conflicts } = calcTensorWithConflicts();
-  const n = Storage.get('n');
-  engine.drawLayers(n, tensor, conflicts, onLayerClick);
+// Render layer thumbnails
+function renderLayers(tensor, conflicts) {
+  engine.drawLayers(Storage.n, tensor, conflicts, (k) => {
+    Storage.activeLayer = (Storage.activeLayer === k) ? -1 : k;
+    updateViz();
+  });
 }
 
-function onLayerClick(newActiveLayer) {
-  Storage.set('activeLayer', newActiveLayer);
-  engine.setActiveLayer(newActiveLayer);
-  updateVisualization();
-}
-
-// Preset loading functions (unchanged)
-function loadPreset(presetName) {
-  const preset = PRESETS[presetName];
-  if (!preset) {
-    if (presetName === 'naive3x3') loadNaive3x3();
-    else if (presetName === 'laderman') loadLaderman();
-    return;
-  }
+// Load preset
+function loadPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+  
+  // Handle generated presets
+  const data = preset.generate ? preset.generate() : preset;
   
   const components = [];
-  for (let k = 0; k < preset.r; k++) {
+  for (let i = 0; i < preset.r; i++) {
     components.push({
-      u: [...preset.u[k]],
-      v: [...preset.v[k]],
-      w: [...preset.w[k]]
+      u: [...data.u[i]],
+      v: [...data.v[i]],
+      w: [...data.w[i]]
     });
   }
   
   Storage.update({
     n: preset.n,
     r: preset.r,
-    components: components,
-    activeLayer: -1
+    components,
+    activeLayer: -1,
+    activeComponent: 0
   });
   
-  engine.setActiveLayer(-1);
-  updateInfo();
-  updateVisualization(true);
+  updateViz(true);
 }
 
-function loadNaive3x3() {
-  const n = 9;
-  const r = 27;
-  
-  const u = [
-    [1,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0],
-    [1,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0],
-    [1,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0],
-    [0,0,0,1,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,1,0,0,0],
-    [0,0,0,1,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,1,0,0,0],
-    [0,0,0,1,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,1,0,0,0],
-    [0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,1],
-    [0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,1],
-    [0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,1]
-  ];
-  const v = [
-    [1,0,0,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,1,0,0],
-    [0,1,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,0,1,0],
-    [0,0,1,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,1,0,0],
-    [0,1,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,0,1,0],
-    [0,0,1,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0,1],
-    [1,0,0,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,1,0,0],
-    [0,1,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,0,1,0],
-    [0,0,1,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0,1]
-  ];
-  const w = [
-    [1,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0],
-    [0,1,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0],
-    [0,0,1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0],
-    [0,0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0,0],
-    [0,0,0,0,1,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,1,0,0,0,0],
-    [0,0,0,0,0,1,0,0,0],[0,0,0,0,0,1,0,0,0],[0,0,0,0,0,1,0,0,0],
-    [0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,1,0,0],
-    [0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1,0],
-    [0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,1]
-  ];
-
-  const components = [];
-  for (let k = 0; k < r; k++) {
-    components.push({ u: [...u[k]], v: [...v[k]], w: [...w[k]] });
-  }
-
-  Storage.update({
-    n: n,
-    r: r,
-    components: components,
-    activeLayer: -1
-  });
-  
-  engine.setActiveLayer(-1);
-  updateInfo();
-  updateVisualization(true);
-}
-
-function loadLaderman() {
-  const n = 9;
-  const r = 23;
-
-  const ladermanData = {
-    u: [
-      [1,1,1,1,1,0,0,1,1],[1,0,0,1,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],
-      [1,0,0,1,1,0,0,0,0],[0,0,0,1,1,0,0,0,0],[1,0,0,0,0,0,0,0,0],
-      [1,0,0,0,0,0,1,1,0],[1,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,1,1,0],
-      [1,1,1,0,1,1,1,1,0],[0,0,0,0,0,0,0,1,0],[0,0,1,0,0,0,0,1,1],
-      [0,0,1,0,0,0,0,0,1],[0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,1,1],
-      [0,0,1,0,1,1,0,0,0],[0,0,1,0,0,1,0,0,0],[0,0,0,0,1,1,0,0,0],
-      [0,1,0,0,0,0,0,0,0],[0,0,0,0,0,1,0,0,0],[0,0,0,1,0,0,0,0,0],
-      [0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,0,1]
-    ],
-    v: [
-      [0,0,0,0,1,0,0,0,0],[0,1,0,0,1,0,0,0,0],[1,1,0,1,1,1,1,0,1],
-      [1,1,0,0,1,0,0,0,0],[1,1,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0],
-      [1,0,1,0,0,1,0,0,0],[0,0,1,0,0,1,0,0,0],[1,0,1,0,0,0,0,0,0],
-      [0,0,0,0,0,1,0,0,0],[1,0,1,1,1,1,1,1,0],[0,0,0,0,1,0,1,1,0],
-      [0,0,0,0,1,0,0,1,0],[0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,1,1,0],
-      [0,0,0,0,0,1,1,0,1],[0,0,0,0,0,1,0,0,1],[0,0,0,0,0,0,1,0,1],
-      [0,0,0,1,0,0,0,0,0],[0,0,0,0,0,0,0,1,0],[0,0,1,0,0,0,0,0,0],
-      [0,1,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,1]
-    ],
-    w: [
-      [0,1,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0,0],[0,0,0,1,0,0,0,0,0],
-      [0,1,0,1,1,0,0,0,0],[0,1,0,0,1,0,0,0,0],[1,1,1,1,1,0,1,0,1],
-      [0,0,1,0,0,0,1,0,1],[0,0,0,0,0,0,1,0,1],[0,0,1,0,0,0,0,0,1],
-      [0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,1,0,0],[0,1,0,0,0,0,1,1,0],
-      [0,0,0,0,0,0,1,1,0],[1,1,1,1,0,1,1,1,0],[0,1,0,0,0,0,0,1,0],
-      [0,0,1,1,0,1,0,0,0],[0,0,0,1,0,1,0,0,0],[0,0,1,0,0,1,0,0,0],
-      [1,0,0,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0],[0,0,0,0,0,1,0,0,0],
-      [0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,1]
-    ]
+// Setup stepper controls
+function setupStepper(upId, downId, getValue, setValue, min, max, onChange) {
+  document.getElementById(upId).onclick = () => {
+    const val = getValue();
+    if (val < max) {
+      setValue(val + 1);
+      onChange();
+    }
   };
+  
+  document.getElementById(downId).onclick = () => {
+    const val = getValue();
+    if (val > min) {
+      setValue(val - 1);
+      onChange();
+    }
+  };
+}
 
-  const components = [];
-  for (let k = 0; k < r; k++) {
-    components.push({
-      u: [...ladermanData.u[k]],
-      v: [...ladermanData.v[k]],
-      w: [...ladermanData.w[k]]
+// Setup random generators
+function randomize(sparse = false) {
+  const { components, n } = Storage;
+  
+  if (sparse) {
+    // Sparse random
+    components.forEach(c => {
+      ['u', 'v', 'w'].forEach(vec => {
+        for (let i = 0; i < n; i++) {
+          c[vec][i] = Math.random() < 0.3 ? 1 : 0;
+        }
+      });
+    });
+  } else {
+    // One-hot random
+    components.forEach(c => {
+      ['u', 'v', 'w'].forEach(vec => {
+        c[vec].fill(0);
+        c[vec][Math.floor(Math.random() * n)] = 1;
+      });
     });
   }
-
-  Storage.update({
-    n: n,
-    r: r,
-    components: components,
-    activeLayer: -1
-  });
   
-  engine.setActiveLayer(-1);
-  updateInfo();
-  updateVisualization(true);
+  Storage.components = components;
+  updateViz();
 }
 
-// Updated mobile menu without auto-close
+// Reduce handler
+function handleReduce() {
+  const btn = document.getElementById('reduce');
+  btn.disabled = true;
+  btn.textContent = 'Reducing...';
+
+  setTimeout(() => {
+    try {
+      const { components, n } = Storage;
+      const reduced = Flip.reduceComponents(components, n);
+      
+      Storage.update({
+        components: reduced,
+        r: reduced.length,
+        activeComponent: Math.min(Storage.activeComponent, reduced.length - 1)
+      });
+      
+      updateViz();
+    } catch (err) {
+      console.error(err);
+      alert('Reduce failed: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Reduce';
+    }
+  }, 10);
+}
+
+// Mobile menu setup
 function setupMobileMenu() {
-  const menuToggle = document.getElementById('menuToggle');
+  const toggle = document.getElementById('menuToggle');
   const settings = document.getElementById('settings');
   const overlay = document.getElementById('settingsOverlay');
-  const closeBtn = document.getElementById('closeSettings');
+  const close = document.getElementById('closeSettings');
   
-  const openSettings = () => {
+  const openMenu = () => {
     settings.classList.add('active');
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
   };
   
-  const closeSettings = () => {
+  const closeMenu = () => {
     settings.classList.remove('active');
     overlay.classList.remove('active');
     document.body.style.overflow = '';
   };
   
-  menuToggle.addEventListener('click', () => {
-    settings.classList.contains('active') ? closeSettings() : openSettings();
-  });
-  
-  overlay.addEventListener('click', closeSettings);
-  closeBtn.addEventListener('click', closeSettings);
-  
-  // Removed auto-close on button clicks
+  toggle.onclick = () => settings.classList.contains('active') ? closeMenu() : openMenu();
+  overlay.onclick = closeMenu;
+  close.onclick = closeMenu;
 }
 
-function handleReduceClick() {
-  const btn = document.getElementById('reduce');
-  if (!btn) return;
-
-  btn.disabled = true;
-  const prevLabel = btn.textContent;
-  btn.textContent = 'Reducing...';
-
-  try {
-    const components = Storage.get('components');
-    const n = Storage.get('n');
-    
-    const newComponents = Flip.reduceComponents(components, n, {
-      flipLim: 1_000_000,
-      plusLim: 10_000
-    });
-
-    const newActiveComponent = Math.min(
-      Storage.get('activeComponent'), 
-      Math.max(0, newComponents.length - 1)
-    );
-    
-    Storage.update({
-      components: newComponents,
-      r: newComponents.length,
-      activeComponent: newActiveComponent
-    });
-
-    updateInfo();
-    updateVisualization();
-  } catch (err) {
-    console.error(err);
-    alert('Reduce failed: ' + (err?.message || String(err)));
-  } finally {
-    btn.disabled = false;
-    btn.textContent = prevLabel || 'Reduce';
-  }
-}
-
-// Initialization
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  // Create render engine
+  // Create engine
   engine = new RenderEngine(
     document.getElementById('view3d'),
     document.getElementById('layers')
   );
-  
-  engine.init();
 
-  const savedCameraPos = Storage.get('cameraPosition');
-  if (savedCameraPos) {
-    engine.setCameraPosition(savedCameraPos);
-  }
-  
-  // Initialize settings from storage
-  const autoRotate = Storage.get('autoRotate');
-  const showConflicts = Storage.get('showConflicts');
-  const showLayers = Storage.get('showLayers');
-  const activeLayer = Storage.get('activeLayer');
-  
-  // Update checkboxes to reflect saved state
-  document.getElementById('autoRotate').checked = autoRotate;
-  document.getElementById('showConflicts').checked = showConflicts;
-  document.getElementById('showLayers').checked = showLayers;
-  
-  // Apply settings to engine
-  engine.setAutoRotate(autoRotate);
-  engine.setActiveLayer(activeLayer);
-  engine.setShowConflicts(showConflicts);
-  
-  // Initialize state from storage
-  if (!Storage.get('components') || Storage.get('components').length === 0) {
+  // Initialize components if needed
+  if (!Storage.components || !Storage.components.length) {
     initComponents();
   }
 
-  updateLayersVisibility();
-  
-  // Subscribe to storage changes
-  Storage.subscribe((key, value) => {
-    switch (key) {
-      case 'autoRotate':
-        engine.setAutoRotate(value);
-        document.getElementById('autoRotate').checked = value;
-        break;
-      case 'showConflicts':
-        engine.setShowConflicts(value);
-        document.getElementById('showConflicts').checked = value;
-        break;
-      case 'showLayers':
-        updateLayersVisibility();
-        document.getElementById('showLayers').checked = value;
-        break;
-    }
+  // Setup checkboxes
+  ['autoRotate', 'showConflicts', 'showLayers'].forEach(id => {
+    const el = document.getElementById(id);
+    el.checked = Storage[id];
+    el.onchange = (e) => {
+      Storage[id] = e.target.checked;
+      if (id === 'showLayers') {
+        document.getElementById('container').classList.toggle('layers-visible', e.target.checked);
+        engine.handleResize();
+      } else {
+        updateViz();
+      }
+    };
   });
+
+  // Setup steppers
+  setupStepper('sizeUp', 'sizeDown', 
+    () => Storage.n, 
+    (v) => { Storage.n = v; },
+    2, 9,
+    () => {
+      Storage.activeLayer = -1;
+      initComponents();
+      updateViz(true);
+    }
+  );
   
+  setupStepper('compUp', 'compDown',
+    () => Storage.r,
+    (v) => { Storage.r = v; },
+    1, 27,
+    () => {
+      Storage.activeComponent = Math.min(Storage.activeComponent, Storage.r - 1);
+      initComponents();
+      updateViz();
+    }
+  );
+
+  // Setup buttons
+  document.getElementById('randomizeSparse').onclick = () => randomize(true);
+  document.getElementById('randomizeOneHot').onclick = () => randomize(false);
+  document.getElementById('clear').onclick = () => { initComponents(); updateViz(); };
+  document.getElementById('reduce').onclick = handleReduce;
+
+  // Preset buttons
+  ['naive2x2', 'strassen', 'naive3x3', 'laderman'].forEach(id => {
+    document.getElementById(id).onclick = () => loadPreset(id);
+  });
+
+  // Mobile menu
+  setupMobileMenu();
+
+  // Window resize
+  window.addEventListener('resize', () => engine.handleResize());
+
+  // Initial layers visibility
+  document.getElementById('container').classList.toggle('layers-visible', Storage.showLayers);
+
   // Initial render
-  updateVisualization(true);
-  updateInfo();
-  
-  // Load default preset if no components
-  if (Storage.get('components').every(c => 
-    c.u.every(v => !v) && c.v.every(v => !v) && c.w.every(v => !v)
-  )) {
+  updateViz(true);
+
+  // Load default preset if empty
+  if (Storage.components.every(c => !c.u.some(b => b) && !c.v.some(b => b) && !c.w.some(b => b))) {
     loadPreset('strassen');
   }
-  
-  setupMobileMenu();
-  
-  // Event Bindings
-  document.getElementById('sizeUp').onclick = () => {
-    const n = Storage.get('n');
-    if (n < 9) {
-      Storage.update({
-        n: n + 1,
-        activeLayer: -1
-      });
-      initComponents();
-      engine.setActiveLayer(-1);
-      updateInfo();
-      updateVisualization(true);
-    }
-  };
-  
-  document.getElementById('sizeDown').onclick = () => {
-    const n = Storage.get('n');
-    if (n > 2) {
-      Storage.update({
-        n: n - 1,
-        activeLayer: -1
-      });
-      initComponents();
-      engine.setActiveLayer(-1);
-      updateInfo();
-      updateVisualization(true);
-    }
-  };
-  
-  document.getElementById('compUp').onclick = () => {
-    const r = Storage.get('r');
-    if (r < 27) {
-      Storage.set('r', r + 1);
-      initComponents();
-      updateInfo();
-      updateVisualization();
-    }
-  };
-  
-  document.getElementById('compDown').onclick = () => {
-    const r = Storage.get('r');
-    const activeComponent = Storage.get('activeComponent');
-    if (r > 1) {
-      Storage.update({
-        r: r - 1,
-        activeComponent: Math.min(activeComponent, r - 2)
-      });
-      initComponents();
-      updateInfo();
-      updateVisualization();
-    }
-  };
-  
-  document.getElementById('randomizeSparse').onclick = () => {
-    const components = Storage.get('components');
-    const n = Storage.get('n');
-    
-    components.forEach(comp => {
-      for (let i = 0; i < n; i++) {
-        comp.u[i] = Math.random() < 0.3 ? 1 : 0;
-        comp.v[i] = Math.random() < 0.3 ? 1 : 0;
-        comp.w[i] = Math.random() < 0.3 ? 1 : 0;
-      }
-    });
-    
-    Storage.set('components', components);
-    updateInfo();
-    updateVisualization();
-  };
-  
-  document.getElementById('randomizeOneHot').onclick = () => {
-    const components = Storage.get('components');
-    const n = Storage.get('n');
-    
-    components.forEach(comp => {
-      comp.u.fill(0); comp.u[Math.floor(Math.random() * n)] = 1;
-      comp.v.fill(0); comp.v[Math.floor(Math.random() * n)] = 1;
-      comp.w.fill(0); comp.w[Math.floor(Math.random() * n)] = 1;
-    });
-    
-    Storage.set('components', components);
-    updateInfo();
-    updateVisualization();
-  };
-  
-  document.getElementById('clear').onclick = () => {
-    initComponents();
-    updateInfo();
-    updateVisualization();
-  };
-  
-  document.getElementById('naive2x2').onclick = () => loadPreset('naive2x2');
-  document.getElementById('strassen').onclick = () => loadPreset('strassen');
-  document.getElementById('naive3x3').onclick = () => loadPreset('naive3x3');
-  document.getElementById('laderman').onclick = () => loadPreset('laderman');
-  
-  document.getElementById('reduce').onclick = handleReduceClick;
-  
-  document.getElementById('autoRotate').onchange = (e) => {
-    Storage.set('autoRotate', e.target.checked);
-  };
-  
-  document.getElementById('showConflicts').onchange = (e) => {
-    Storage.set('showConflicts', e.target.checked);
-    updateVisualization();
-  };
-  
-  document.getElementById('showLayers').onchange = (e) => {
-    Storage.set('showLayers', e.target.checked);
-  };
-  
-  window.addEventListener('resize', () => {
-    engine.handleResize();
-  });
 });
-
-window.updateLayersVisibility = updateLayersVisibility;
