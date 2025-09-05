@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CP Decomposition</title>
+
+  <!-- Open Graph meta tags -->
+  <meta property="og:title" content="CP Decomposition" />
+  <meta property="og:description" content="Matrix multiplication tensor decomposition demonstration" />
+  <meta property="og:image" content="https://qdiag.xyz/assets/cpd-preview.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://qdiag.xyz/cpd/" />
+
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/assets/icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/assets/icons/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/assets/icons/favicon-16x16.png" />
+  <link rel="manifest" href="https://qdiag.xyz/assets/icons/site.webmanifest" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="container">
+    <!-- Settings sidebar -->
+    <div id="settings">
+      <div class="section">
+        <div class="setting">
+          <label>Size</label>
+          <div class="stepper">
+            <button id="sizeDown">−</button>
+            <span id="sizeVal">4</span>
+            <button id="sizeUp">+</button>
+          </div>
+        </div>
+        <div class="setting">
+          <label>Components</label>
+          <div class="stepper">
+            <button id="compDown">−</button>
+            <span id="compVal">7</span>
+            <button id="compUp">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="checkbox">
+          <input type="checkbox" id="autoRotate" checked />
+          <label for="autoRotate">Auto Rotate</label>
+        </div>
+        <div class="checkbox">
+          <input type="checkbox" id="showConflicts" />
+          <label for="showConflicts">Show mod 2 conflicts</label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Presets</div>
+        <div class="preset-columns">
+          <div class="preset-col">
+            <div class="preset-col-title">2×2</div>
+            <button id="naive2x2" class="primary">Naive</button>
+            <button id="strassen" class="primary">Strassen</button>
+          </div>
+          <div class="preset-col">
+            <div class="preset-col-title">3×3</div>
+            <button id="naive3x3" class="primary">Naive</button>
+            <button id="laderman" class="primary">Laderman</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <button id="randomizeSparse">Random Sparse</button>
+        <button id="randomizeOneHot">One-Hot</button>
+        <button id="clear">Clear</button>
+      </div>
+
+      <!-- Reduce CTA -->
+      <div class="section">
+        <button id="reduce" class="primary cta">Reduce</button>
+        <div class="hint">Performs 1,000,000 flips <a href="https://arxiv.org/abs/2212.01175">(paper)</a></div>
+      </div>
+    </div>
+
+    <!-- 3D canvas -->
+    <div id="view3d">
+      <div id="info">4×4×4 tensor</div>
+    </div>
+
+    <!-- Layer thumbnails -->
+    <div id="layers"></div>
+
+    <!-- Components area -->
+    <div id="components"></div>
+  </div>
+
+  <!-- Three.js (global THREE) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Visualization engine -->
+  <script src="./render.js"></script>
+  <!-- Flip/descent engine -->
+  <script src="./flip.js"></script>
+  <!-- App logic / UI -->
+  <script src="./script.js"></script>
+</body>
+</html>

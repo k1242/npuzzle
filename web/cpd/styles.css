@@ -1,0 +1,314 @@
+/* styles.css */
+/* All comments in code should be in English. */
+
+/* Reset and base */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #fafafa;
+  color: #333;
+  overflow: hidden;
+}
+
+/* Layout grid */
+#container {
+  display: grid;
+  grid-template-columns: 200px 1fr 120px;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+  gap: 1px;
+  background: #e0e0e0;
+}
+
+/* Settings panel */
+#settings {
+  grid-row: 1;
+  grid-column: 1;
+  background: #fff;
+  padding: 15px;
+  overflow-y: auto;
+  box-shadow: 1px 0 3px rgba(0,0,0,0.05);
+}
+
+.setting { margin-bottom: 12px; }
+
+.setting label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+.section {
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section:last-child { border-bottom: none; }
+
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepper button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stepper button:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.stepper span {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox label {
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.8;
+  margin-bottom: 0;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Preset columns */
+.preset-columns { display: flex; gap: 10px; }
+.preset-col { flex: 1; }
+
+.preset-col-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+/* Buttons */
+button {
+  width: 100%;
+  padding: 6px;
+  margin-top: 6px;
+  background: #fff;
+  border: 1px solid #ddd;
+  color: #333;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+button:hover { background: #f5f5f5; border-color: #bbb; }
+
+button.primary {
+  border-color: #6c63ff;
+  color: #6c63ff;
+  background: #fff;
+}
+
+button.primary:hover { background: #f5f4ff; }
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Reduce CTA emphasis */
+button.cta {
+  padding: 9px;
+  font-weight: 700;
+}
+
+/* Small hint text under buttons */
+.hint {
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.65;
+  margin-top: 6px;
+}
+
+/* 3D view area */
+#view3d {
+  grid-row: 1;
+  grid-column: 2;
+  background: #f5f5f5;
+  position: relative;
+}
+
+/* Layers panel */
+#layers {
+  grid-row: 1;
+  grid-column: 3;
+  background: #fff;
+  padding: 20px 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  box-shadow: -1px 0 3px rgba(0,0,0,0.05);
+}
+
+.layer-cube {
+  width: 80px;
+  height: 80px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+  transition: all 0.2s;
+  position: relative;
+  background: #fff;
+}
+
+.layer-cube:hover { border-color: #ddd; }
+
+.layer-cube.active {
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 1px rgba(108,99,255,0.2);
+}
+
+.layer-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Components panel */
+#components {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  background: #fff;
+  padding: 15px;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  border-top: 1px solid #e0e0e0;
+  height: 120px;
+  box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+  align-items: center;
+}
+
+/* Vector labels */
+.vector-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  padding-right: 10px;
+  border-right: 1px solid #e0e0e0;
+  margin-right: -10px;
+}
+
+.vector-label-item {
+  height: 18px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  opacity: 0.5;
+  text-transform: uppercase;
+}
+
+/* Component cards */
+.component {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.component:hover { border-color: #ccc; background: #f5f5f5; }
+
+.component.active {
+  border-color: #6c63ff;
+  background: #f9f8ff;
+  box-shadow: 0 0 0 1px rgba(108,99,255,0.2);
+}
+
+.vectors { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+
+.vector { display: flex; gap: 2px; align-items: center; }
+.vector-values { display: flex; gap: 2px; }
+
+/* Bit cell */
+.bit {
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 10px;
+  color: #666;
+}
+
+.bit.small { width: 14px; height: 14px; font-size: 8px; }
+.bit.tiny { width: 10px; height: 10px; font-size: 7px; }
+
+.bit.on {
+  background: #6c63ff;
+  border-color: #7c72ff;
+  color: #fff;
+}
+
+.bit:hover { border-color: #aaa; }
+
+/* Info overlay */
+#info {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 11px;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
