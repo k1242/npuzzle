@@ -1,4 +1,4 @@
-// script.js - Simplified main application logic
+// script.js - Main application logic with worker integration
 /* global Storage, RenderEngine, Flip, PRESETS */
 
 let engine = null;
@@ -226,32 +226,56 @@ function randomize(sparse = false) {
   updateViz();
 }
 
-// Reduce handler
+// Reduce handler with progress
 function handleReduce() {
   const btn = document.getElementById('reduce');
+  const originalContent = btn.innerHTML;
+  
+  // Add progress bar structure
+  btn.innerHTML = '<span class="btn-text">Reducing...</span><div class="btn-progress"><div class="btn-progress-bar"></div></div>';
   btn.disabled = true;
-  btn.textContent = 'Reducing...';
-
-  setTimeout(() => {
-    try {
-      const { components, n } = Storage;
-      const reduced = Flip.reduceComponents(components, n);
-      
-      Storage.update({
-        components: reduced,
-        r: reduced.length,
-        activeComponent: Math.min(Storage.activeComponent, reduced.length - 1)
-      });
-      
-      updateViz();
-    } catch (err) {
-      console.error(err);
-      alert('Reduce failed: ' + err.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Reduce';
+  
+  const progressBar = btn.querySelector('.btn-progress-bar');
+  
+  // Get initial term count
+  const { components, n } = Storage;
+  const initialTerms = components.filter(c => 
+    c.u.some(b => b) && c.v.some(b => b) && c.w.some(b => b)
+  ).length;
+  
+  Flip.reduceComponents(components, n, {
+    onProgress: (data) => {
+      // Update progress bar
+      const percent = (data.current / data.total) * 100;
+      progressBar.style.width = percent + '%';
     }
-  }, 10);
+  }).then(result => {
+    const { components: reduced, initialRank, finalRank } = result;
+    
+    Storage.update({
+      components: reduced,
+      r: reduced.length,
+      activeComponent: Math.min(Storage.activeComponent, reduced.length - 1)
+    });
+    
+    updateViz();
+    
+    // Show result for 3 seconds
+    btn.innerHTML = `<span class="btn-text">Reduced: ${initialRank} → ${finalRank}</span>`;
+    btn.classList.add('success');
+    
+    setTimeout(() => {
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
+      btn.classList.remove('success');
+    }, 3000);
+    
+  }).catch(err => {
+    console.error(err);
+    alert('Reduce failed: ' + err.message);
+    btn.innerHTML = originalContent;
+    btn.disabled = false;
+  });
 }
 
 // Mobile menu setup
