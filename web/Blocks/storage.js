@@ -55,15 +55,18 @@ export class StorageManager {
   loadSettings() {
     const animSaved = localStorage.getItem(this.config.STORAGE.ANIMATIONS_ENABLED);
     const mouseSaved = localStorage.getItem(this.config.STORAGE.MOUSE_CONTROL_ENABLED);
+    const touchSaved = localStorage.getItem(this.config.STORAGE.TOUCH_BUTTONS_ENABLED);
     
     return {
       animationsEnabled: animSaved === null ? true : animSaved === 'true',
-      mouseControlEnabled: mouseSaved === 'true'
+      mouseControlEnabled: mouseSaved === 'true',
+      touchButtonsEnabled: touchSaved === 'true'
     };
   }
   
   saveSettings(settings) {
     localStorage.setItem(this.config.STORAGE.ANIMATIONS_ENABLED, settings.animationsEnabled);
     localStorage.setItem(this.config.STORAGE.MOUSE_CONTROL_ENABLED, settings.mouseControlEnabled);
+    localStorage.setItem(this.config.STORAGE.TOUCH_BUTTONS_ENABLED, settings.touchButtonsEnabled);
   }
 }

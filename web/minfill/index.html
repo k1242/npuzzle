@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gaussian Elimination</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #6366f1;
+      --accent-light: #c7d2fe;
+      --accent-dark: #4f46e5;
+      --bg: #fafafa;
+      --text-primary: #1f2937;
+      --border-color: #e5e7eb;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 24px rgba(0,0,0,0.1);
+      --headerH: 100px;
+      --panelW: 280px;
+      
+      --cell-one: #dbeafe;
+      --cell-fillin: #fecaca;
+      --cell-empty: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: var(--headerH);
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--headerH);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px 0;
+      z-index: 100;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .header * {
+      pointer-events: auto;
+    }
+
+    .leftControls, .rightControls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .title {
+      font-size: 2.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all .15s ease;
+      padding: 10px 22px;
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(99,102,241,.25);
+    }
+
+    .btn:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(99,102,241,.35);
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: var(--text-primary);
+      padding: 8px 22px;
+    }
+
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .hamburger {
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: #fff;
+      cursor: pointer;
+      transition: all .3s ease;
+      color: var(--text-primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hamburger span {
+      display: block;
+      position: relative;
+      width: 24px;
+      height: 3px;
+      background: var(--text-primary);
+      transition: all .3s ease;
+      border-radius: 1.5px;
+    }
+
+    .hamburger span::before,
+    .hamburger span::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      width: 24px;
+      height: 3px;
+      background: var(--text-primary);
+      transition: all .3s ease;
+      border-radius: 1.5px;
+    }
+
+    .hamburger span::before { top: -8px; }
+    .hamburger span::after { top: 8px; }
+
+    .hamburger.active {
+      background: var(--accent);
+      box-shadow: 0 2px 6px rgba(99,102,241,.3);
+    }
+
+    .hamburger.active span { background: transparent; }
+    .hamburger.active span::before {
+      top: 0;
+      transform: rotate(45deg);
+      background: #fff;
+    }
+    .hamburger.active span::after {
+      top: 0;
+      transform: rotate(-45deg);
+      background: #fff;
+    }
+
+    #panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: var(--panelW);
+      background: #fff;
+      border-right: 1px solid var(--border-color);
+      transform: translateX(-100%);
+      transition: .25s ease;
+      z-index: 90;
+      padding: 90px 22px 30px;
+      overflow-y: auto;
+    }
+
+    #panel.open {
+      transform: translateX(0);
+    }
+
+    .settings-section {
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+    }
+
+    .settings-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.6;
+    }
+
+    .setting {
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .setting label {
+      font-weight: 600;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stepper button {
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background: #e5e7eb;
+      font-size: 1.2rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .15s ease;
+    }
+
+    .stepper button:hover {
+      background: #d1d5db;
+      transform: scale(1.05);
+    }
+
+    .stepper span {
+      min-width: 48px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-group input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #e5e7eb;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .slider-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .slider-group input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    .slider-value {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #d1d5db;
+      border-radius: 26px;
+      transition: .2s;
+    }
+
+    .slider-toggle:before {
+      content: '';
+      position: absolute;
+      left: 2px;
+      bottom: 2px;
+      width: 22px;
+      height: 22px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    input:checked + .slider-toggle {
+      background: var(--accent);
+    }
+
+    input:checked + .slider-toggle:before {
+      transform: translateX(20px);
+    }
+
+    .score-badge {
+      position: fixed;
+      right: 20px;
+      top: 120px;
+      z-index: 100;
+      background: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .score-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.6;
+      font-weight: 600;
+    }
+
+    .score-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .main-content {
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .matrix-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .matrix-wrap {
+      background: #d1d5db;
+      padding: 8px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      display: inline-block;
+    }
+
+    .matrix {
+      display: grid;
+      gap: 2px;
+      background: transparent;
+      user-select: none;
+    }
+
+    .cell {
+      background: var(--cell-empty);
+      border: 2px solid transparent;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #6b7280;
+      transition: all 0.15s ease;
+      aspect-ratio: 1;
+    }
+
+    .cell.one {
+      background: var(--cell-one);
+    }
+
+    .cell.fillin {
+      background: var(--cell-fillin);
+    }
+
+    .cell.inactive {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .cell.selectable {
+      cursor: pointer;
+      border-color: var(--accent-light);
+    }
+
+    .cell.selectable:hover {
+      box-shadow: 0 0 0 2px var(--accent);
+      z-index: 1;
+      transform: scale(1.05);
+    }
+
+    .stats-panel {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+      min-width: 300px;
+      max-width: 350px;
+    }
+
+    .stats-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.6;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      font-size: 0.95rem;
+      color: #6b7280;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    #sparsityChart {
+      margin-top: 20px;
+      width: 100%;
+      height: 180px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .status-msg {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      min-height: 30px;
+    }
+
+    .status-msg.completed {
+      color: var(--accent);
+      font-size: 1.3rem;
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .stats-panel {
+        max-width: 500px;
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .title {
+        font-size: 2rem;
+      }
+      
+      .score-badge {
+        top: 100px;
+        right: 10px;
+        padding: 10px 16px;
+      }
+      
+      .score-value {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="leftControls">
+      <button id="menuBtn" class="hamburger">
+        <span></span>
+      </button>
+      <h1 class="title">Gauss Elimination</h1>
+    </div>
+    <div class="rightControls">
+      <button id="newBtn" class="btn">New Game</button>
+    </div>
+  </header>
+
+  <div id="panel">
+    <div class="settings-section">
+      <h3 class="settings-header">Matrix Settings</h3>
+      
+      <div class="setting">
+        <label>Size</label>
+        <div class="stepper" id="sizeStepper">
+          <button class="minus">−</button>
+          <span id="sizeValue">8</span>
+          <button class="plus">+</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <label>Sparsity</label>
+        <div class="slider-group" style="flex: 1; max-width: 140px;">
+          <input type="range" id="sparsitySlider" min="10" max="90" value="50" step="5">
+          <div class="slider-value" id="sparsityValue">0.50</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 class="settings-header">Display</h3>
+      
+      <div class="setting">
+        <label>Goal</label>
+        <div class="stepper" id="goalStepper">
+          <button class="minus">◀</button>
+          <span id="goalValue" style="min-width: 90px;">Triangular</span>
+          <button class="plus">▶</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <label>Show XOR count</label>
+        <label class="switch">
+          <input type="checkbox" id="showXorCount" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="score-badge">
+    <div class="score-label">XOR Ops</div>
+    <div class="score-value" id="scoreValue">0</div>
+  </div>
+
+  <div id="app">
+    <div class="controls">
+      <button id="restartBtn" class="btn-secondary btn">Restart</button>
+      <button id="undoBtn" class="btn-secondary btn" disabled>Undo</button>
+      <button id="playRandomBtn" class="btn-secondary btn">▶ Random</button>
+      <button id="playGreedyBtn" class="btn-secondary btn">▶ Greedy</button>
+      <button id="pauseBtn" class="btn-secondary btn" style="display: none;">⏸ Pause</button>
+    </div>
+
+    <div class="status-msg" id="statusMsg">Click "New Game" to start</div>
+
+    <div class="main-content">
+      <div class="matrix-section">
+        <div class="matrix-wrap">
+          <div class="matrix" id="matrix"></div>
+        </div>
+      </div>
+
+      <div class="stats-panel">
+        <h3 class="stats-header">Statistics</h3>
+        <div class="stat-item">
+          <span class="stat-label">Current sparsity</span>
+          <span class="stat-value" id="currentSparsity">-</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Steps completed</span>
+          <span class="stat-value" id="stepsCompleted">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Fill-in created</span>
+          <span class="stat-value" id="fillinCount">0</span>
+        </div>
+        <canvas id="sparsityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let N = 8;
+    let sparsity = 0.5;
+    let goal = 0; // 0 = triangular, 1 = diagonal
+    let showXorCount = true;
+    let matrix = [];
+    let originalMatrix = [];
+    let fillIn = [];
+    let step = 0;
+    let score = 0;
+    let state = 'idle';
+    let phase = 'forward'; // 'forward' or 'backward'
+    let history = [];
+    let sparsityHistory = [];
+    let avgSparsityHistory = [];
+    let autoplayInterval = null;
+    let autoplayMode = null; // 'random' or 'greedy'
+
+    // Elements
+    const menuBtn = document.getElementById('menuBtn');
+    const panel = document.getElementById('panel');
+    const newBtn = document.getElementById('newBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const playRandomBtn = document.getElementById('playRandomBtn');
+    const playGreedyBtn = document.getElementById('playGreedyBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const matrixEl = document.getElementById('matrix');
+    const statusMsg = document.getElementById('statusMsg');
+    const scoreValue = document.getElementById('scoreValue');
+    const sizeValue = document.getElementById('sizeValue');
+    const goalValue = document.getElementById('goalValue');
+    const sparsitySlider = document.getElementById('sparsitySlider');
+    const sparsityValue = document.getElementById('sparsityValue');
+    const showXorCountToggle = document.getElementById('showXorCount');
+    const currentSparsityEl = document.getElementById('currentSparsity');
+    const stepsCompletedEl = document.getElementById('stepsCompleted');
+    const fillinCountEl = document.getElementById('fillinCount');
+    const chartCanvas = document.getElementById('sparsityChart');
+    const ctx = chartCanvas.getContext('2d');
+
+    menuBtn.onclick = () => {
+      panel.classList.toggle('open');
+      menuBtn.classList.toggle('active');
+    };
+
+    // Size stepper with auto new game
+    document.getElementById('sizeStepper').onclick = e => {
+      if (e.target.classList.contains('plus') && N < 40) {
+        N++;
+        sizeValue.textContent = N;
+        resetAvgStats();
+        startNewGame();
+      }
+      if (e.target.classList.contains('minus') && N > 4) {
+        N--;
+        sizeValue.textContent = N;
+        resetAvgStats();
+        startNewGame();
+      }
+    };
+
+    // Goal stepper with auto new game
+    document.getElementById('goalStepper').onclick = e => {
+      const target = e.target;
+      if (target.tagName === 'BUTTON') {
+        goal = 1 - goal;
+        goalValue.textContent = goal === 0 ? 'Triangular' : 'Diagonal';
+        resetAvgStats();
+        startNewGame();
+      }
+    };
+
+    // Sparsity slider with auto new game
+    sparsitySlider.oninput = e => {
+      sparsity = e.target.value / 100;
+      sparsityValue.textContent = sparsity.toFixed(2);
+      resetAvgStats();
+      startNewGame();
+    };
+
+    showXorCountToggle.onchange = e => {
+      showXorCount = e.target.checked;
+      render();
+    };
+
+    // Autoplay controls
+    playRandomBtn.onclick = () => {
+      if (state === 'idle') startNewGame();
+      startAutoplay('random');
+    };
+    playGreedyBtn.onclick = () => {
+      if (state === 'idle') startNewGame();
+      startAutoplay('greedy');
+    };
+    pauseBtn.onclick = stopAutoplay;
+
+    function startAutoplay(mode) {
+      autoplayMode = mode;
+      playRandomBtn.style.display = 'none';
+      playGreedyBtn.style.display = 'none';
+      pauseBtn.style.display = 'inline-block';
+      autoplayStep();
+    }
+
+    function stopAutoplay() {
+      if (autoplayInterval) clearTimeout(autoplayInterval);
+      autoplayInterval = null;
+      autoplayMode = null;
+      playRandomBtn.style.display = 'inline-block';
+      playGreedyBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
+    }
+
+    function autoplayStep() {
+      if (state !== 'selecting' || !autoplayMode) {
+        stopAutoplay();
+        return;
+      }
+
+      const pivots = getSelectablePivots();
+      if (pivots.length === 0) {
+        stopAutoplay();
+        return;
+      }
+
+      let pivot;
+      if (autoplayMode === 'random') {
+        pivot = pivots[Math.floor(Math.random() * pivots.length)];
+      } else { // greedy
+        pivot = pivots.reduce((best, p) => {
+          const xor = calcXorOps(p.i, p.j);
+          return xor < calcXorOps(best.i, best.j) ? p : best;
+        });
+      }
+
+      performPivot(pivot.i, pivot.j);
+
+      if (state === 'selecting') {
+        autoplayInterval = setTimeout(autoplayStep, 200);
+      } else {
+        stopAutoplay();
+      }
+    }
+
+    function resetAvgStats() {
+      avgSparsityHistory = [];
+      drawChart();
+    }
+
+    // Generate random non-symmetric matrix
+    function generateMatrix() {
+      const m = Array(N).fill(0).map(() => Array(N).fill(0));
+      
+      for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N; j++) {
+          if (Math.random() > sparsity) {
+            m[i][j] = 1;
+          }
+        }
+      }
+      
+      // Ensure diagonal has some 1s
+      for (let i = 0; i < N; i++) {
+        if (i % 2 === 0 && m[i][i] === 0) {
+          m[i][i] = 1;
+        }
+      }
+      
+      return m;
+    }
+
+    // Calculate XOR operations if we choose this pivot
+    function calcXorOps(pivotRow, pivotCol) {
+      let ops = 0;
+      if (phase === 'forward') {
+        // Count rows below that need XOR
+        for (let k = step + 1; k < N; k++) {
+          if (matrix[k][pivotCol] === 1) ops++;
+        }
+        // If diagonal mode, add future backward operations
+        if (goal === 1) {
+          for (let k = 0; k < step; k++) {
+            if (matrix[k][pivotCol] === 1) ops++;
+          }
+        }
+      } else { // backward
+        // Count rows above that need XOR
+        for (let k = 0; k < step; k++) {
+          if (matrix[k][pivotCol] === 1) ops++;
+        }
+      }
+      return ops;
+    }
+
+    // Calculate current sparsity of active submatrix
+    function calcCurrentSparsity() {
+      if (phase === 'forward') {
+        if (step >= N) return 0;
+        let ones = 0;
+        let total = 0;
+        for (let i = step; i < N; i++) {
+          for (let j = step; j < N; j++) {
+            if (matrix[i][j] === 1) ones++;
+            total++;
+          }
+        }
+        return total > 0 ? ones / total : 0;
+      } else { // backward
+        if (step < 0) return 0;
+        let ones = 0;
+        let total = 0;
+        for (let i = 0; i <= step; i++) {
+          for (let j = 0; j <= step; j++) {
+            if (matrix[i][j] === 1) ones++;
+            total++;
+          }
+        }
+        return total > 0 ? ones / total : 0;
+      }
+    }
+
+    // Count fill-in created
+    function countFillIn() {
+      let count = 0;
+      for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N; j++) {
+          if (fillIn[i][j] === 1) count++;
+        }
+      }
+      return count;
+    }
+
+    function startNewGame() {
+      stopAutoplay();
+      matrix = generateMatrix();
+      originalMatrix = matrix.map(row => [...row]);
+      fillIn = Array(N).fill(0).map(() => Array(N).fill(0));
+      step = 0;
+      score = 0;
+      state = 'selecting';
+      phase = 'forward';
+      history = [];
+      sparsityHistory = [calcCurrentSparsity()];
+      updateStats();
+      updateScore();
+      updateStatus();
+      render();
+    }
+
+    newBtn.onclick = startNewGame;
+
+    restartBtn.onclick = () => {
+      if (state === 'idle') return;
+      stopAutoplay();
+      matrix = originalMatrix.map(row => [...row]);
+      fillIn = Array(N).fill(0).map(() => Array(N).fill(0));
+      step = 0;
+      score = 0;
+      state = 'selecting';
+      phase = 'forward';
+      history = [];
+      sparsityHistory = [calcCurrentSparsity()];
+      updateStats();
+      updateScore();
+      updateStatus();
+      render();
+    };
+
+    undoBtn.onclick = () => {
+      if (history.length === 0) return;
+      const prev = history.pop();
+      matrix = prev.matrix;
+      fillIn = prev.fillIn;
+      step = prev.step;
+      score = prev.score;
+      state = prev.state;
+      phase = prev.phase;
+      sparsityHistory = prev.sparsityHistory;
+      updateStats();
+      updateScore();
+      updateStatus();
+      render();
+    };
+
+    function updateScore() {
+      scoreValue.textContent = score;
+      undoBtn.disabled = history.length === 0;
+    }
+
+    function updateStats() {
+      const currSp = calcCurrentSparsity();
+      currentSparsityEl.textContent = currSp.toFixed(3);
+      stepsCompletedEl.textContent = phase === 'forward' ? step : N + (N - step - 1);
+      fillinCountEl.textContent = countFillIn();
+      drawChart();
+    }
+
+    function updateStatus() {
+      statusMsg.classList.remove('completed');
+      if (state === 'idle') {
+        statusMsg.textContent = 'Click "New Game" to start';
+      } else if (state === 'selecting') {
+        const phaseText = phase === 'forward' ? 'Forward' : 'Backward';
+        statusMsg.textContent = `${phaseText} step ${phase === 'forward' ? step + 1 : N - step}: Select pivot`;
+      } else if (state === 'completed') {
+        statusMsg.textContent = `Completed! Total XOR operations: ${score}`;
+        statusMsg.classList.add('completed');
+        
+        // Update average sparsity history
+        for (let i = 0; i < sparsityHistory.length; i++) {
+          if (avgSparsityHistory[i] === undefined) {
+            avgSparsityHistory[i] = {sum: 0, count: 0};
+          }
+          avgSparsityHistory[i].sum += sparsityHistory[i];
+          avgSparsityHistory[i].count++;
+        }
+        drawChart();
+      }
+    }
+
+    function drawChart() {
+      const w = chartCanvas.width = chartCanvas.offsetWidth * window.devicePixelRatio;
+      const h = chartCanvas.height = chartCanvas.offsetHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      const cw = chartCanvas.offsetWidth;
+      const ch = chartCanvas.offsetHeight;
+      
+      ctx.clearRect(0, 0, cw, ch);
+      
+      if (avgSparsityHistory.length === 0 && sparsityHistory.length === 0) return;
+      
+      const padding = 30;
+      const plotW = cw - 2 * padding;
+      const plotH = ch - 2 * padding;
+      
+      // Draw axes
+      ctx.strokeStyle = '#d1d5db';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, padding);
+      ctx.lineTo(padding, ch - padding);
+      ctx.lineTo(cw - padding, ch - padding);
+      ctx.stroke();
+      
+      // Labels
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '11px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText('Step', cw / 2, ch - 5);
+      ctx.save();
+      ctx.translate(10, ch / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('Sparsity', 0, 0);
+      ctx.restore();
+      
+      // Draw average sparsity history if available
+      if (avgSparsityHistory.length > 0) {
+        const maxSteps = avgSparsityHistory.length;
+        ctx.strokeStyle = '#93c5fd';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        avgSparsityHistory.forEach((item, i) => {
+          const x = padding + (i / (maxSteps - 1 || 1)) * plotW;
+          const y = ch - padding - (item.sum / item.count) * plotH;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      
+      // Draw current game sparsity
+      if (sparsityHistory.length > 0) {
+        const maxSteps = Math.max(sparsityHistory.length, avgSparsityHistory.length);
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        sparsityHistory.forEach((sp, i) => {
+          const x = padding + (i / (maxSteps - 1 || 1)) * plotW;
+          const y = ch - padding - sp * plotH;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+    }
+
+    function getSelectablePivots() {
+      const pivots = [];
+      if (phase === 'forward') {
+        for (let i = step; i < N; i++) {
+          for (let j = step; j < N; j++) {
+            if (matrix[i][j] === 1) {
+              pivots.push({i, j});
+            }
+          }
+        }
+      } else { // backward
+        for (let i = 0; i <= step; i++) {
+          for (let j = 0; j <= step; j++) {
+            if (matrix[i][j] === 1) {
+              pivots.push({i, j});
+            }
+          }
+        }
+      }
+      return pivots;
+    }
+
+    function render() {
+      if (matrix.length === 0) return;
+      
+      matrixEl.innerHTML = '';
+      matrixEl.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+      
+      const cellSize = Math.max(16, Math.min(45, 600 / N));
+      const fontSize = Math.max(0.65, Math.min(0.85, 30 / N));
+      
+      for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N; j++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.style.fontSize = fontSize + 'rem';
+          cell.dataset.i = i;
+          cell.dataset.j = j;
+          
+          if (matrix[i][j] === 1) {
+            cell.classList.add('one');
+          }
+          
+          // Mark inactive cells based on phase
+          if (phase === 'forward') {
+            if (i < step || j < step) {
+              cell.classList.add('inactive');
+            }
+          } else { // backward
+            if (i > step || j > step) {
+              cell.classList.add('inactive');
+            }
+          }
+          
+          // Selectable pivots
+          let isSelectable = false;
+          if (state === 'selecting') {
+            if (phase === 'forward' && i >= step && j >= step && matrix[i][j] === 1) {
+              isSelectable = true;
+            } else if (phase === 'backward' && i <= step && j <= step && matrix[i][j] === 1) {
+              isSelectable = true;
+            }
+          }
+          
+          if (isSelectable) {
+            cell.classList.add('selectable');
+            if (showXorCount) {
+              const xorOps = calcXorOps(i, j);
+              if (xorOps > 0) {
+                cell.textContent = xorOps;
+              }
+            }
+          }
+          
+          matrixEl.appendChild(cell);
+        }
+      }
+    }
+
+    function performPivot(i, j) {
+      history.push({
+        matrix: matrix.map(row => [...row]),
+        fillIn: fillIn.map(row => [...row]),
+        step,
+        score,
+        state,
+        phase,
+        sparsityHistory: [...sparsityHistory]
+      });
+      
+      if (phase === 'forward') {
+        // Swap row i with row step
+        if (i !== step) {
+          [matrix[i], matrix[step]] = [matrix[step], matrix[i]];
+          [fillIn[i], fillIn[step]] = [fillIn[step], fillIn[i]];
+        }
+        
+        // Swap column j with column step
+        if (j !== step) {
+          for (let k = 0; k < N; k++) {
+            [matrix[k][j], matrix[k][step]] = [matrix[k][step], matrix[k][j]];
+            [fillIn[k][j], fillIn[k][step]] = [fillIn[k][step], fillIn[k][j]];
+          }
+        }
+        
+        // XOR operations - eliminate below
+        let ops = 0;
+        for (let k = step + 1; k < N; k++) {
+          if (matrix[k][step] === 1) {
+            ops++;
+            for (let l = step; l < N; l++) {
+              const oldVal = matrix[k][l];
+              matrix[k][l] ^= matrix[step][l];
+              if (oldVal === 0 && matrix[k][l] === 1 && originalMatrix[k][l] === 0) {
+                fillIn[k][l] = 1;
+              }
+            }
+          }
+        }
+        
+        score += ops;
+        step++;
+        sparsityHistory.push(calcCurrentSparsity());
+        
+        // Check if forward phase completed
+        if (step >= N || !hasSelectablePivot()) {
+          if (goal === 1) {
+            // Start backward phase
+            phase = 'backward';
+            step = N - 1;
+          } else {
+            state = 'completed';
+          }
+        }
+      } else { // backward
+        // Swap row i with row step
+        if (i !== step) {
+          [matrix[i], matrix[step]] = [matrix[step], matrix[i]];
+          [fillIn[i], fillIn[step]] = [fillIn[step], fillIn[i]];
+        }
+        
+        // Swap column j with column step
+        if (j !== step) {
+          for (let k = 0; k < N; k++) {
+            [matrix[k][j], matrix[k][step]] = [matrix[k][step], matrix[k][j]];
+            [fillIn[k][j], fillIn[k][step]] = [fillIn[k][step], fillIn[k][j]];
+          }
+        }
+        
+        // XOR operations - eliminate above
+        let ops = 0;
+        for (let k = 0; k < step; k++) {
+          if (matrix[k][step] === 1) {
+            ops++;
+            for (let l = 0; l <= step; l++) {
+              const oldVal = matrix[k][l];
+              matrix[k][l] ^= matrix[step][l];
+              if (oldVal === 0 && matrix[k][l] === 1 && originalMatrix[k][l] === 0) {
+                fillIn[k][l] = 1;
+              }
+            }
+          }
+        }
+        
+        score += ops;
+        step--;
+        sparsityHistory.push(calcCurrentSparsity());
+        
+        // Check if backward phase completed
+        if (step < 0 || !hasSelectablePivot()) {
+          state = 'completed';
+        }
+      }
+      
+      updateStats();
+      updateScore();
+      updateStatus();
+      render();
+    }
+
+    matrixEl.onclick = e => {
+      if (state !== 'selecting') return;
+      
+      const cell = e.target.closest('.cell');
+      if (!cell || !cell.classList.contains('selectable')) return;
+      
+      const i = parseInt(cell.dataset.i);
+      const j = parseInt(cell.dataset.j);
+      
+      performPivot(i, j);
+    };
+
+    function hasSelectablePivot() {
+      return getSelectablePivots().length > 0;
+    }
+
+    render();
+    window.addEventListener('resize', drawChart);
+  </script>
+</body>
+</html>

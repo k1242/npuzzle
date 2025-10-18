@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rubik's Cube Solver</title>
+
+  <!-- Open Graph meta tags -->
+  <meta property="og:title" content="Rubik's Cube Solver" />
+  <meta property="og:description" content="Rubik's Cube Solver" />
+  <meta property="og:image" content="https://qdiag.xyz/assets/cube-preview.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://qdiag.xyz/cube/" />
+
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/assets/icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/assets/icons/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/assets/icons/favicon-16x16.png" />
+  <link rel="manifest" href="https://qdiag.xyz/assets/icons/site.webmanifest" />
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Rubik's Cube Solver</h1>
+    
+    <twisty-player
+      id="cube"
+      puzzle="3x3x3"
+      background="none"
+      control-panel="none"
+      hint-facelets="none"
+      tempo-scale="3"
+    ></twisty-player>
+
+    <div class="status" id="status">Ready</div>
+
+    <div class="controls">
+      <div class="button-row">
+        <button onclick="app.rotate('R')">R</button>
+        <button onclick="app.rotate('R\'')">R'</button>
+        <button onclick="app.rotate('L')">L</button>
+        <button onclick="app.rotate('L\'')">L'</button>
+        <button onclick="app.rotate('U')">U</button>
+        <button onclick="app.rotate('U\'')">U'</button>
+      </div>
+      
+      <div class="button-row">
+        <button onclick="app.rotate('D')">D</button>
+        <button onclick="app.rotate('D\'')">D'</button>
+        <button onclick="app.rotate('F')">F</button>
+        <button onclick="app.rotate('F\'')">F'</button>
+        <button onclick="app.rotate('B')">B</button>
+        <button onclick="app.rotate('B\'')">B'</button>
+      </div>
+
+      <div class="button-row action-buttons">
+        <button onclick="app.scramble()" class="primary">Scramble</button>
+        <button onclick="app.solve()" class="primary" id="solveBtn">Solve</button>
+        <button onclick="app.reset()">Reset</button>
+      </div>
+    </div>
+
+    <div class="solution" id="solution"></div>
+  </div>
+
+  <script src="https://cdn.cubing.net/v0/js/cubing/twisty" type="module"></script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cats</title>
+
+  <!-- Open Graph meta tags -->
+  <meta property="og:title" content="Cats">
+  <meta property="og:description" content="Line-up strategy">
+  <meta property="og:image" content="https://qdiag.xyz/assets/cats-preview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://qdiag.xyz/cats/">
+  
+  <!-- Fonts and styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/assets/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/assets/icons/favicon-16x16.png">
+  <link rel="manifest" href="https://qdiag.xyz/assets/icons/site.webmanifest">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="leftControls">
+      <button id="menuBtn" class="hamburger">
+        <span></span>
+      </button>
+      <div class="title-wrapper">
+        <button id="titleBtn" class="title-button">
+          Cats
+          <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <div id="gamesDropdown" class="games-dropdown">
+          <a href="/cats/" class="game-item active">
+            <div class="game-name">Cats</div>
+            <div class="game-desc">Line-up strategy</div>
+          </a>
+          <a href="/sudoku/" class="game-item">
+            <div class="game-name">Sudoku</div>
+            <div class="game-desc">Classic</div>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="rightControls">
+      <button id="newBtn" class="btn btn-primary">New Game</button>
+    </div>
+  </header>
+
+  <!-- Settings Panel -->
+  <div id="panel">
+    <div class="settings-section">
+      <h3 class="settings-header">Game Settings</h3>
+      <div class="setting">
+        <label for="enableBoop">Enable Boop</label>
+        <label class="switch">
+          <input type="checkbox" id="enableBoop" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Game Area -->
+  <div id="app">
+    <!-- Piece Selection -->
+    <div class="piece-selection" id="pieceSelection">
+      <div class="selection-prompt" id="selectionPrompt">Select piece to place:</div>
+      <div class="piece-options" id="pieceOptions"></div>
+    </div>
+
+    <!-- Winner Display -->
+    <div class="winner-display" id="winnerDisplay"></div>
+
+    <!-- Game Board -->
+    <div id="boardWrap">
+      <div id="board"></div>
+    </div>
+
+    <!-- Player Pools -->
+    <div class="pools-container">
+      <div class="pool player1-pool">
+        <div class="pool-counts">
+          <div class="pool-item">
+            <span class="piece-symbol">a</span>
+            <span class="piece-count" id="p1Kittens">8</span>
+          </div>
+          <div class="pool-item">
+            <span class="piece-symbol">A</span>
+            <span class="piece-count" id="p1Cats">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="pool player2-pool">
+        <div class="pool-counts">
+          <div class="pool-item">
+            <span class="piece-symbol">b</span>
+            <span class="piece-count" id="p2Kittens">8</span>
+          </div>
+          <div class="pool-item">
+            <span class="piece-symbol">B</span>
+            <span class="piece-count" id="p2Cats">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <a href="https://t.me/qdiag" target="_blank">Telegram channel @qdiag</a>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="common.js"></script>
+  <script src="engine.js"></script>
+  <script src="renderer.js"></script>
+  <script src="storage.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

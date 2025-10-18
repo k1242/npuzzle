@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bin(00:00)</title>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Binary Clock">
+  <meta property="og:description" content="Binary LED-style clock in the browser.">
+  <meta property="og:image" content="https://qdiag.xyz/assets/binclock-preview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://qdiag.xyz/binclock/">
+
+  <!-- Favicons (in assets/icons-binclock) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://qdiag.xyz/assets/icons-binclock/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://qdiag.xyz/assets/icons-binclock/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://qdiag.xyz/assets/icons-binclock/favicon-16x16.png">
+  <link rel="manifest" href="https://qdiag.xyz/assets/icons-binclock/site.webmanifest">
+
+  <style>
+    :root{--bg:#0b0c10;--panel:#111318;--fg:#e5e7eb;--muted:#9aa3af;--off:rgba(255,255,255,.14);--on:#10b981;--glow:rgba(16,185,129,.45);--gap:clamp(10px,2.2vw,18px);--radius:20px}
+    *{box-sizing:border-box}
+    html,body{height:100%;background:radial-gradient(1200px 800px at 70% -10%,#17202a 0%,var(--bg) 60%);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";line-height:1.45}
+    body{margin:0;display:grid;place-items:center;padding:6vh 4vw}
+    .wrap{width:min(560px,92vw);display:grid;gap:var(--gap);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04);padding:clamp(16px,3.5vw,28px)}
+    .row{display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:calc(var(--gap)*.8);width:100%}
+    .light{aspect-ratio:1/1;border-radius:9999px;background:var(--off);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1px rgba(255,255,255,.06);transition:background .2s,box-shadow .2s,transform .2s}
+    .light.on{background:var(--on);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 18px 4px var(--glow),0 0 0 1px rgba(16,185,129,.35);transform:translateZ(0)}
+  </style>
+</head>
+<body>
+  <main class="wrap" aria-live="polite">
+    <section><div id="hours" class="row" aria-label="Hours"></div></section>
+    <section><div id="minutes" class="row" aria-label="Minutes"></div></section>
+    <section><div id="seconds" class="row" aria-label="Seconds"></div></section>
+  </main>
+
+  <script>
+    // Create a row of lights
+    function createRow(host,count){host.style.setProperty('--cols',count);host.replaceChildren();for(let i=0;i<count;i++){const d=document.createElement('div');d.className='light';d.setAttribute('aria-hidden','true');host.appendChild(d)}}
+    // Decimal to fixed-width binary
+    const toFixedBinary=(n,w)=>n.toString(2).padStart(w,'0');
+    // Local time parts
+    function getLocalTimeParts(){const d=new Date();return{h:d.getHours(),m:d.getMinutes(),s:d.getSeconds()}}
+    // Apply bits to row (MSB first)
+    function applyBits(host,bits){const it=host.children;for(let i=0;i<bits.length;i++){it[i].classList.toggle('on',bits[i]==='1')}}
+    // Init rows
+    const hoursEl=document.getElementById('hours'),minutesEl=document.getElementById('minutes'),secondsEl=document.getElementById('seconds');
+    createRow(hoursEl,5);createRow(minutesEl,6);createRow(secondsEl,6);
+    // Update UI and title bin(HH:MM)
+    function update(){const{h,m,s}=getLocalTimeParts();applyBits(hoursEl,toFixedBinary(h,5));applyBits(minutesEl,toFixedBinary(m,6));applyBits(secondsEl,toFixedBinary(s,6));document.title=`bin(${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')})`;}
+    update();const delay=1000-(Date.now()%1000);setTimeout(()=>{update();setInterval(update,1000)},delay);
+  </script>
+</body>
+</html>

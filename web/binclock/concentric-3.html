@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bin(00:00:00)</title>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Binary Clock — Three Circles">
+  <meta property="og:description" content="Binary clock with three circles for hours, minutes, and seconds, each showing values in concentric rings.">
+  <meta property="og:type" content="website">
+
+  <style>
+    :root{
+      /* Base palette */
+      --bg:#0b0c10;
+      --off:rgba(255,255,255,.14);
+      --on:#10b981;
+      --glow:rgba(16,185,129,.45);
+      
+      /* Ring geometry */
+      --circle-gap:24;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;background:radial-gradient(1200px 800px at 50% -10%,#17202a 0%,var(--bg) 60%);margin:0}
+    body{display:grid;place-items:center;padding:4vh 4vw}
+
+    .container{display:flex;gap:var(--circle-gap);align-items:center;flex-wrap:wrap;justify-content:center}
+    
+    svg{width:min(28vmin,200px);height:auto;display:block}
+    
+    /* Ring styles */
+    .ring{fill:none;stroke:var(--off);transition:stroke .2s ease,filter .2s ease,opacity .2s ease;opacity:.85}
+    .ring.on{stroke:var(--on);filter:drop-shadow(0 0 6px var(--glow));opacity:1}
+    
+    /* Center dot */
+    .center-dot{fill:var(--off);transition:fill .2s ease,filter .2s ease}
+    .center-dot.on{fill:var(--on);filter:drop-shadow(0 0 8px var(--glow))}
+    
+    @media(max-width:600px){
+      .container{gap:16px}
+      svg{width:min(28vw,150px)}
+    }
+  </style>
+</head>
+<body>
+  <main class="container" aria-live="polite">
+    <!-- Hours circle -->
+    <svg class="hours" viewBox="-100 -100 200 200" role="img" aria-label="Hours in binary">
+      <g class="rings"></g>
+      <circle class="center-dot" cx="0" cy="0"></circle>
+    </svg>
+    
+    <!-- Minutes circle -->
+    <svg class="minutes" viewBox="-100 -100 200 200" role="img" aria-label="Minutes in binary">
+      <g class="rings"></g>
+      <circle class="center-dot" cx="0" cy="0"></circle>
+    </svg>
+    
+    <!-- Seconds circle -->
+    <svg class="seconds" viewBox="-100 -100 200 200" role="img" aria-label="Seconds in binary">
+      <g class="rings"></g>
+      <circle class="center-dot" cx="0" cy="0"></circle>
+    </svg>
+  </main>
+
+  <script>
+    // Target outer radius for all circles
+    const TARGET_OUTER_RADIUS = 85;
+    
+    // Unit configurations: number of rings excluding the center dot.
+    // Center dot represents 2^0 (1). Rings represent 2^1, 2^2, ...
+    const UNITS = {
+      hours:   { rings: 4 }, // 2,4,8,16
+      minutes: { rings: 5 }, // 2,4,8,16,32
+      seconds: { rings: 5 }  // 2,4,8,16,32
+    };
+    
+    // Calculate geometry for each unit to match outer size
+    function calculateGeometry(rings){
+      // Thickness and gaps are based on the number of rings (excluding center dot)
+      const gap = 4;
+      const thickness = ((TARGET_OUTER_RADIUS - 5) / rings) - gap;
+      // Slightly larger dot when there are fewer rings
+      const dotRadius = 5 + (6 - rings) * 2;
+      return { thickness, gap, dotRadius };
+    }
+    
+    // Build rings for a unit
+    function buildRings(unit){
+      const container = document.querySelector(`.${unit} .rings`);
+      const ringCount = UNITS[unit].rings;
+      const geom = calculateGeometry(ringCount);
+      
+      // Set center dot size
+      document.querySelector(`.${unit} .center-dot`)
+        .setAttribute('r', geom.dotRadius.toFixed(1));
+      
+      // Calculate radii from center outward
+      const radii = [];
+      let r = geom.dotRadius + geom.gap + geom.thickness/2;
+      for(let i = 0; i < ringCount; i++){
+        radii.push(r);
+        r += geom.thickness + geom.gap;
+      }
+      
+      // Create rings
+      container.replaceChildren();
+      radii.forEach((radius, i) => {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('class', 'ring');
+        circle.setAttribute('cx', '0');
+        circle.setAttribute('cy', '0');
+        circle.setAttribute('r', radius.toFixed(1));
+        circle.setAttribute('stroke-width', geom.thickness.toFixed(1));
+        circle.setAttribute('data-ring', i); // ring index: 0 = inner
+        container.appendChild(circle);
+      });
+    }
+    
+    // Update display
+    function update(){
+      const now = new Date();
+      const time = {
+        hours: now.getHours(),
+        minutes: now.getMinutes(),
+        seconds: now.getSeconds()
+      };
+      
+      // Update each unit
+      Object.keys(UNITS).forEach(unit => {
+        const val = time[unit];
+        const rings = document.querySelectorAll(`.${unit} .ring`);
+        
+        // Center dot shows bit 2^0 (LSB)
+        const dotOn = (val & 1) === 1;
+        document.querySelector(`.${unit} .center-dot`).classList.toggle('on', dotOn);
+        
+        // Rings show bits starting from 2^1 outward
+        rings.forEach((ring, i) => {
+          // i = 0 (inner ring) corresponds to bit 2^1
+          const bitOn = ((val >> (i + 1)) & 1) === 1;
+          ring.classList.toggle('on', bitOn);
+        });
+      });
+      
+      // Update title
+      document.title = `bin(${String(time.hours).padStart(2,'0')}:${
+        String(time.minutes).padStart(2,'0')}:${
+        String(time.seconds).padStart(2,'0')})`;
+    }
+    
+    // Initialize
+    function init(){
+      Object.keys(UNITS).forEach(buildRings);
+      update();
+      
+      // Sync to next second
+      const delay = 1000 - (Date.now() % 1000);
+      setTimeout(() => {
+        update();
+        setInterval(update, 1000);
+      }, delay);
+    }
+    
+    init();
+  </script>
+</body>
+</html>

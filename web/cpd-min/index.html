@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tensor 3D View</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="settings">
+      <div class="section">
+        <div class="section-title">Tensor Input</div>
+        <textarea id="tensorInput" placeholder="Enter tensor as string (0,1,2 where 2=-1)&#10;Format: dimU,dimV,dimW:data or just data for cube&#10;Example: 4,4,4:010120110..."></textarea>
+        <button id="applyTensor">Apply</button>
+        <button id="resetTensor">Reset to Default</button>
+        <div class="hint">Size: <span id="tensorSize">4×4×4</span></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Export</div>
+        <div class="setting">
+          <label>File Name</label>
+          <input type="text" id="exportFileName" value="tensor_export" />
+        </div>
+        <div class="setting">
+          <label>DPI</label>
+          <input type="number" id="exportDPI" min="72" max="1200" step="1" value="300" />
+        </div>
+        <div class="setting">
+          <label>Frame Size: <span id="exportFrameSizeVal">80%</span></label>
+          <input type="range" id="exportFrameSize" min="20" max="100" step="5" value="80" />
+        </div>
+        <button id="exportPNG">Export PNG</button>
+        <div class="hint">Use Ctrl+Wheel to resize frame</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Colors</div>
+        <div class="setting">
+          <label>Active (1)</label>
+          <input type="color" id="colorActive" value="#6c63ff" />
+        </div>
+        <div class="setting">
+          <label>Negative (-1)</label>
+          <input type="color" id="colorNegative" value="#ff4444" />
+        </div>
+        <div class="setting">
+          <label>Inactive (0)</label>
+          <input type="color" id="colorInactive" value="#e0e0e0" />
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Opacity</div>
+        <div class="setting">
+          <label>Active: <span id="opacityActiveVal">0.85</span></label>
+          <input type="range" id="opacityActive" min="0" max="1" step="0.05" value="0.85" />
+        </div>
+        <div class="setting">
+          <label>Negative: <span id="opacityNegativeVal">0.85</span></label>
+          <input type="range" id="opacityNegative" min="0" max="1" step="0.05" value="0.85" />
+        </div>
+        <div class="setting">
+          <label>Inactive: <span id="opacityInactiveVal">0.20</span></label>
+          <input type="range" id="opacityInactive" min="0" max="1" step="0.05" value="0.20" />
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Camera</div>
+        <div class="setting">
+          <label>Distance: <span id="distanceVal">17.3</span></label>
+          <input type="range" id="distance" min="5" max="50" step="0.5" value="17.3" />
+        </div>
+        <div class="setting">
+          <label>Rotation X: <span id="rotXVal">-30°</span></label>
+          <input type="range" id="rotX" min="-180" max="180" step="5" value="-30" />
+        </div>
+        <div class="setting">
+          <label>Rotation Y: <span id="rotYVal">45°</span></label>
+          <input type="range" id="rotY" min="-180" max="180" step="5" value="45" />
+        </div>
+        <div class="setting">
+          <label>Rotation Z: <span id="rotZVal">0°</span></label>
+          <input type="range" id="rotZ" min="-180" max="180" step="5" value="0" />
+        </div>
+        <button id="resetCamera">Reset View</button>
+      </div>
+    </div>
+
+    <div id="view3d">
+      <div id="exportFrame"></div>
+    </div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="./renderer.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>

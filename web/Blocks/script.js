@@ -15,6 +15,7 @@ const app = {
   settings: {
     animationsEnabled: true,
     mouseControlEnabled: false,
+    touchButtonsEnabled: false,
     pausedBySettings: false,
     wasGamePaused: false
   }
@@ -35,6 +36,7 @@ const loadSettings = () => {
   // Apply settings to UI
   $('#animationsToggle').checked = app.settings.animationsEnabled;
   $('#mouseControlToggle').checked = app.settings.mouseControlEnabled;
+  $('#touchButtonsToggle').checked = app.settings.touchButtonsEnabled;
 };
 
 const saveSettings = () => {
@@ -74,19 +76,14 @@ const initGame = () => {
   // Create game engine (which is also the event bus)
   app.engine = new GameEngine();
   
-  // Create renderer with DOM elements
+  // Create renderer with DOM elements - single set for all screen sizes
   app.renderer = new Renderer({
     board: $('#board'),
     score: $('#score'),
     level: $('#level'),
     lines: $('#lines'),
-    scoreMobile: $('#scoreMobile'),
-    levelMobile: $('#levelMobile'),
-    linesMobile: $('#linesMobile'),
     nextQueue: $('#nextQueue'),
-    nextQueueMobile: $('#nextQueueMobile'),
     holdPreview: $('#holdPreview'),
-    holdPreviewMobile: $('#holdPreviewMobile'),
     pausedOverlay: $('#pausedOverlay'),
     app: $('#app')
   }, app.engine); // Pass event bus
@@ -103,9 +100,30 @@ const initGame = () => {
     app.controller.onNewPiece();
   });
   
+  // Handle first touch - enable touch buttons and disable mouse control
+  app.engine.on(Config.EVENTS.FIRST_TOUCH, () => {
+    if (!app.settings.touchButtonsEnabled) {
+      app.settings.touchButtonsEnabled = true;
+      app.controller.setTouchButtons(true);
+      app.engine.emit(Config.EVENTS.TOUCH_BUTTONS_TOGGLE, true);
+      $('#touchButtonsToggle').checked = true;
+      
+      // Disable mouse control to avoid conflicts
+      if (app.settings.mouseControlEnabled) {
+        app.settings.mouseControlEnabled = false;
+        app.controller.setMouseControl(false);
+        app.engine.emit(Config.EVENTS.MOUSE_CONTROL_TOGGLE, false);
+        $('#mouseControlToggle').checked = false;
+      }
+      
+      saveSettings();
+    }
+  });
+  
   // Apply loaded settings
   app.renderer.setAnimationsEnabled(app.settings.animationsEnabled);
   app.controller.setMouseControl(app.settings.mouseControlEnabled);
+  app.controller.setTouchButtons(app.settings.touchButtonsEnabled);
   
   // Try to load saved game
   if (app.engine.loadState()) {
@@ -140,6 +158,31 @@ const setupUIHandlers = () => {
     app.settings.mouseControlEnabled = e.target.checked;
     app.controller.setMouseControl(app.settings.mouseControlEnabled);
     app.engine.emit(Config.EVENTS.MOUSE_CONTROL_TOGGLE, app.settings.mouseControlEnabled);
+    
+    // Disable touch buttons when enabling mouse control
+    if (app.settings.mouseControlEnabled && app.settings.touchButtonsEnabled) {
+      app.settings.touchButtonsEnabled = false;
+      app.controller.setTouchButtons(false);
+      app.engine.emit(Config.EVENTS.TOUCH_BUTTONS_TOGGLE, false);
+      $('#touchButtonsToggle').checked = false;
+    }
+    
+    saveSettings();
+  });
+  
+  $('#touchButtonsToggle').addEventListener('change', e => {
+    app.settings.touchButtonsEnabled = e.target.checked;
+    app.controller.setTouchButtons(app.settings.touchButtonsEnabled);
+    app.engine.emit(Config.EVENTS.TOUCH_BUTTONS_TOGGLE, app.settings.touchButtonsEnabled);
+    
+    // Disable mouse control when enabling touch buttons
+    if (app.settings.touchButtonsEnabled && app.settings.mouseControlEnabled) {
+      app.settings.mouseControlEnabled = false;
+      app.controller.setMouseControl(false);
+      app.engine.emit(Config.EVENTS.MOUSE_CONTROL_TOGGLE, false);
+      $('#mouseControlToggle').checked = false;
+    }
+    
     saveSettings();
   });
   

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bin(00:00)</title>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Binary Clock — Concentric Rings">
+  <meta property="og:description" content="Binary LED-style clock with concentric rings: hours outside, minutes inside, seconds deepest with blinking center dot.">
+  <meta property="og:type" content="website">
+
+  <style>
+    :root{
+      /* Base palette */
+      --bg:#0b0c10;            /* page background */
+      --fg:#e5e7eb;            /* foreground text */
+      --off:rgba(255,255,255,.14); /* ring OFF color */
+      --on:#10b981;            /* ring ON color */
+      --glow:rgba(16,185,129,.45); /* ring glow */
+
+      /* Ring geometry (SVG units) */
+      --ring-thickness:10;     /* stroke width of each ring */
+      --ring-gap:6;            /* space between rings */
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;background:radial-gradient(1200px 800px at 70% -10%,#17202a 0%,var(--bg) 60%);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";line-height:1.45}
+    body{margin:0;display:grid;place-items:center;padding:6vh 4vw}
+
+    .wrap{width:min(640px,94vw);display:grid;place-items:center}
+
+    svg{width:min(86vmin,600px);height:auto;display:block}
+
+    /* Ring visuals */
+    .ring{fill:none;stroke:var(--off);stroke-width:var(--ring-thickness);opacity:.9;transition:stroke .25s ease, filter .25s ease, opacity .25s ease}
+    .ring.on{stroke:var(--on);filter:drop-shadow(0 0 8px var(--glow));opacity:1}
+
+    /* Center dot for seconds LSB */
+    .center-dot{fill:var(--off);transition:fill .25s ease, filter .25s ease, transform .25s ease}
+    .center-dot.on{fill:var(--on);filter:drop-shadow(0 0 10px var(--glow));transform:scale(1.05)}
+  </style>
+</head>
+<body>
+  <main class="wrap" aria-live="polite">
+    <!-- SVG clock: 16 rings + center dot -->
+    <svg viewBox="-300 -300 600 600" role="img" aria-label="Binary Clock: concentric rings (hours outer, minutes middle, seconds inner; center dot is the seconds LSB).">
+      <g id="rings" aria-hidden="true"></g>
+      <!-- Seconds LSB as center dot -->
+      <circle id="centerDot" class="center-dot" cx="0" cy="0" r="8"></circle>
+    </svg>
+  </main>
+
+  <script>
+    // Configuration (SVG units)
+    const RING_THICKNESS = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ring-thickness')) || 10;
+    const RING_GAP = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ring-gap')) || 6;
+
+    // Ring groups: hours(5) + minutes(6) + seconds(5) = 16 total
+    const GROUPS = [
+      { key: 'hours',   width: 5 },
+      { key: 'minutes', width: 6 },
+      { key: 'seconds', width: 5 }
+    ];
+    const TOTAL_RINGS = GROUPS.reduce((n,g)=>n+g.width,0);
+
+    // Convert number to binary string with fixed width
+    function toFixedBinary(n, width){ return n.toString(2).padStart(width, '0'); }
+
+    // Get current time
+    function getLocalTimeParts(){ 
+      const d=new Date(); 
+      return { h:d.getHours(), m:d.getMinutes(), s:d.getSeconds() }; 
+    }
+
+    // Build ring geometry
+    function buildRings(){
+      const host = document.getElementById('rings');
+      host.replaceChildren();
+
+      // Fixed center dot radius
+      const dotRadius = 8;
+      
+      // Calculate starting point from center dot
+      // Innermost ring edge should be: dot radius + gap
+      const innermostRingInnerEdge = dotRadius + RING_GAP;
+      const innermostRingCenter = innermostRingInnerEdge + RING_THICKNESS/2;
+      
+      // Calculate all ring radii working outward from innermost
+      const radii = [];
+      for(let i = TOTAL_RINGS - 1; i >= 0; i--){
+        const ringCenter = innermostRingCenter + (TOTAL_RINGS - 1 - i) * (RING_THICKNESS + RING_GAP);
+        radii.unshift(ringCenter);
+      }
+
+      // Create rings
+      let idx = 0;
+      for(const g of GROUPS){
+        for(let j=0;j<g.width;j++){
+          const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          c.setAttribute('class','ring');
+          c.setAttribute('cx','0'); 
+          c.setAttribute('cy','0'); 
+          c.setAttribute('r', radii[idx].toFixed(2));
+          c.setAttribute('data-group', g.key);
+          c.setAttribute('data-index', String(j));
+          c.setAttribute('aria-label', `${g.key} bit ${j}`);
+          host.appendChild(c);
+          idx++;
+        }
+      }
+
+      // Set center dot
+      document.getElementById('centerDot').setAttribute('r', dotRadius.toFixed(2));
+    }
+
+    // Update display with current time
+    function applyTime(){
+      const {h,m,s} = getLocalTimeParts();
+      const bH = toFixedBinary(h,5);
+      const bM = toFixedBinary(m,6);
+      const bS = toFixedBinary(s,6);
+
+      // Compose bit sequence: hours(5) + minutes(6) + seconds(5 MSB..bit1)
+      const bitSeq = bH + bM + bS.slice(0,5);
+
+      // Update rings
+      const rings = document.querySelectorAll('#rings .ring');
+      for(let i=0;i<rings.length;i++){
+        rings[i].classList.toggle('on', bitSeq[i] === '1');
+      }
+
+      // Update center dot with seconds LSB
+      document.getElementById('centerDot').classList.toggle('on', bS[5] === '1');
+
+      // Update page title
+      document.title = `bin(${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')})`;
+    }
+
+    // Start clock with proper second alignment
+    function start(){
+      buildRings();
+      applyTime();
+      const delay = 1000 - (Date.now() % 1000);
+      setTimeout(()=>{
+        applyTime();
+        setInterval(applyTime, 1000);
+      }, delay);
+    }
+
+    window.addEventListener('resize', buildRings);
+    start();
+  </script>
+</body>
+</html>

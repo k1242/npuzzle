@@ -8,36 +8,32 @@ export class Renderer {
     // Event bus
     this.events = eventBus;
     
-    // DOM elements
+    // DOM elements - single set for all layouts
     this.boardEl = elements.board;
-    
-    // Desktop elements
     this.scoreEl = elements.score;
     this.levelEl = elements.level;
     this.linesEl = elements.lines;
-    
-    // Mobile elements
-    this.scoreMobileEl = elements.scoreMobile;
-    this.levelMobileEl = elements.levelMobile;
-    this.linesMobileEl = elements.linesMobile;
-    
     this.nextQueueEl = elements.nextQueue;
-    this.nextQueueMobileEl = elements.nextQueueMobile;
     this.holdPreviewEl = elements.holdPreview;
-    this.holdPreviewMobileEl = elements.holdPreviewMobile;
     this.pausedOverlayEl = elements.pausedOverlay;
     this.appEl = elements.app;
     
-    // Cell size for mobile
-    this.cellSize = Config.VISUAL.CELL_SIZE.DESKTOP;
-    this.updateCellSize();
+    // Cell size for mobile calculations
+    this.cellSize = this.calculateCellSize();
     
     // Animation state
     this.animationsEnabled = true;
     this.activeAnimations = new Set();
     
+    // Notification queue
+    this.notificationQueue = [];
+    this.showingNotification = false;
+    
     // Subscribe to events
     this.subscribeToEvents();
+    
+    // Create notification container
+    this.createNotificationContainer();
   }
   
   subscribeToEvents() {
@@ -47,11 +43,22 @@ export class Renderer {
       this.updateStats(state);
       this.updateNextQueue(state);
       this.updateHoldDisplay(state);
+      this.updateComboDisplay(state);
     });
     
     // Animation events
     this.events.on(Config.EVENTS.LINES_CLEARED, (data) => {
       this.animateLineClear(data.lines, data.callback);
+      
+      // Show combo notification if combo > 1
+      if (data.combo > 1) {
+        this.showNotification(`${data.combo - 1} COMBO`, 'combo');
+      }
+      
+      // Show back-to-back notification
+      if (data.backToBack) {
+        this.showNotification('BACK-TO-BACK', 'b2b');
+      }
     });
     
     this.events.on(Config.EVENTS.HARD_DROP_START, (data) => {
@@ -67,10 +74,21 @@ export class Renderer {
       );
     });
     
+    // Special move events
+    this.events.on(Config.EVENTS.T_SPIN, (data) => {
+      const text = data.mini ? 'MINI T-SPIN' : 'T-SPIN';
+      const suffix = data.lines > 0 ? ` ${['', 'SINGLE', 'DOUBLE', 'TRIPLE'][data.lines]}` : '';
+      this.showNotification(text + suffix, 'tspin');
+    });
+    
+    this.events.on(Config.EVENTS.PERFECT_CLEAR, () => {
+      this.showNotification('PERFECT CLEAR', 'perfect');
+    });
+    
     // Game state events
     this.events.on(Config.EVENTS.GAME_PAUSE, () => this.updatePauseOverlay(true));
     this.events.on(Config.EVENTS.GAME_RESUME, () => this.updatePauseOverlay(false));
-    this.events.on(Config.EVENTS.GAME_OVER, () => this.showGameOver());
+    this.events.on(Config.EVENTS.GAME_OVER, (data) => this.showGameOver(data));
     this.events.on(Config.EVENTS.GAME_START, () => this.hideGameOver());
     
     // Settings
@@ -79,15 +97,89 @@ export class Renderer {
     });
   }
   
-  // Update cell size based on screen width
-  updateCellSize() {
-    if (window.innerWidth <= Config.BREAKPOINTS.NARROW) {
-      this.cellSize = Config.VISUAL.CELL_SIZE.MOBILE;
-    } else if (window.innerWidth <= Config.BREAKPOINTS.MOBILE) {
-      this.cellSize = Config.VISUAL.CELL_SIZE.TABLET;
-    } else {
-      this.cellSize = Config.VISUAL.CELL_SIZE.DESKTOP;
+  // Create notification container
+  createNotificationContainer() {
+    if (!document.getElementById('notificationContainer')) {
+      const container = document.createElement('div');
+      container.id = 'notificationContainer';
+      container.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 30;
+        pointer-events: none;
+      `;
+      document.body.appendChild(container);
+      this.notificationContainer = container;
     }
+  }
+  
+  // Show notification
+  showNotification(text, type = 'default') {
+    this.notificationQueue.push({ text, type });
+    this.processNotificationQueue();
+  }
+  
+  processNotificationQueue() {
+    if (this.showingNotification || this.notificationQueue.length === 0) return;
+    
+    this.showingNotification = true;
+    const { text, type } = this.notificationQueue.shift();
+    
+    const notification = document.createElement('div');
+    notification.className = `game-notification notification-${type}`;
+    notification.textContent = text;
+    
+    // Style based on type
+    const styles = {
+      default: 'background: rgba(0,0,0,0.9); color: white;',
+      tspin: 'background: linear-gradient(135deg, #d4a5f5, #b19cd9); color: white;',
+      combo: 'background: linear-gradient(135deg, #ffb3ba, #ff9999); color: white;',
+      b2b: 'background: linear-gradient(135deg, #a6c0fe, #89a4f7); color: white;',
+      perfect: 'background: linear-gradient(135deg, #ffd700, #ffed4e); color: #333;'
+    };
+    
+    notification.style.cssText = `
+      ${styles[type] || styles.default}
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: notificationPop 0.8s ease-out;
+      white-space: nowrap;
+    `;
+    
+    this.notificationContainer.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.animation = 'notificationFade 0.3s ease-out forwards';
+      setTimeout(() => {
+        notification.remove();
+        this.showingNotification = false;
+        this.processNotificationQueue();
+      }, 300);
+    }, 800);
+  }
+  
+  // Update combo display
+  updateComboDisplay(state) {
+    // You can add a combo counter to the UI if desired
+    // For now, combos are shown via notifications
+  }
+  
+  // Calculate cell size based on CSS variable
+  calculateCellSize() {
+    const style = getComputedStyle(document.documentElement);
+    return parseInt(style.getPropertyValue('--cell-size')) || 26;
+  }
+  
+  // Update cell size on resize
+  updateCellSize() {
+    this.cellSize = this.calculateCellSize();
   }
   
   // Animation settings
@@ -165,82 +257,72 @@ export class Renderer {
   
   // Update stats
   updateStats(gameState) {
-    // Update desktop stats
-    if (this.scoreEl) this.scoreEl.textContent = gameState.score;
+    if (this.scoreEl) this.scoreEl.textContent = gameState.score.toLocaleString();
     if (this.levelEl) this.levelEl.textContent = gameState.level;
     if (this.linesEl) this.linesEl.textContent = gameState.lines;
-    
-    // Update mobile stats
-    if (this.scoreMobileEl) this.scoreMobileEl.textContent = gameState.score;
-    if (this.levelMobileEl) this.levelMobileEl.textContent = gameState.level;
-    if (this.linesMobileEl) this.linesMobileEl.textContent = gameState.lines;
   }
   
-  // Render preview piece
+  // Render preview piece (4x4 box)
   renderPreview(type) {
     const piece = PIECES[type];
     const preview = document.createElement('div');
     preview.className = 'preview-piece';
-    
-    // Create 4x3 grid for preview
-    for (let r = 0; r < 3; r++) {
+
+    // Create 4x4 grid for preview
+    for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 4; c++) {
         const cell = document.createElement('div');
         cell.className = 'preview-cell';
-        
-        if (r < piece.shape.length && c < piece.shape[0].length && piece.shape[r][c]) {
+
+        if (
+          r < piece.shape.length &&
+          c < piece.shape[0].length &&
+          piece.shape[r][c]
+        ) {
           cell.classList.add('filled', type);
         }
-        
+
         preview.appendChild(cell);
       }
     }
-    
+
     return preview;
   }
+
   
   // Update next queue
   updateNextQueue(gameState) {
+    if (!this.nextQueueEl) return;
+    
     const upcoming = [...gameState.bag, ...gameState.nextBag].slice(0, Config.VISUAL.NEXT_PIECES_COUNT);
     
-    // Update desktop next queue
-    if (this.nextQueueEl) {
-      this.nextQueueEl.innerHTML = '';
-      upcoming.forEach(type => {
-        this.nextQueueEl.appendChild(this.renderPreview(type));
-      });
-    }
-    
-    // Update mobile next queue
-    if (this.nextQueueMobileEl) {
-      this.nextQueueMobileEl.innerHTML = '';
-      upcoming.forEach(type => {
-        this.nextQueueMobileEl.appendChild(this.renderPreview(type));
-      });
-    }
+    this.nextQueueEl.innerHTML = '';
+    upcoming.forEach(type => {
+      this.nextQueueEl.appendChild(this.renderPreview(type));
+    });
   }
   
   // Update hold display
   updateHoldDisplay(gameState) {
-    const renderHold = (element) => {
-      if (!element) return;
+    if (!this.holdPreviewEl) return;
+    
+    this.holdPreviewEl.innerHTML = '';
+    
+    if (gameState.heldPiece) {
+      this.holdPreviewEl.appendChild(this.renderPreview(gameState.heldPiece));
       
-      element.innerHTML = '';
-      
-      if (gameState.heldPiece) {
-        element.appendChild(this.renderPreview(gameState.heldPiece));
+      // Gray out if can't hold
+      if (!gameState.canHold) {
+        this.holdPreviewEl.style.opacity = '0.5';
       } else {
-        const empty = document.createElement('div');
-        empty.className = 'empty-hold';
-        element.appendChild(empty);
+        this.holdPreviewEl.style.opacity = '1';
       }
-    };
-    
-    // Update desktop hold
-    renderHold(this.holdPreviewEl);
-    
-    // Update mobile hold
-    renderHold(this.holdPreviewMobileEl);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'empty-hold';
+      this.holdPreviewEl.appendChild(empty);
+      this.holdPreviewEl.style.opacity = '1';
+    }
   }
   
   // Show/hide pause overlay
@@ -250,10 +332,17 @@ export class Renderer {
     }
   }
   
-  // Game over animation
-  showGameOver() {
+  // Game over animation with stats
+  showGameOver(data) {
     if (this.appEl) {
       this.appEl.classList.add('game-over');
+    }
+    
+    // Show stats if available
+    if (data && data.stats) {
+      const stats = data.stats;
+      // You can add a stats display modal here if desired
+      console.log('Game Stats:', stats);
     }
   }
   
@@ -387,5 +476,8 @@ export class Renderer {
   // Clean up
   destroy() {
     this.cancelAllAnimations();
+    if (this.notificationContainer) {
+      this.notificationContainer.remove();
+    }
   }
 }

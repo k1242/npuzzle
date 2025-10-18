@@ -1,42 +1,98 @@
 // ====== GAME ENGINE ======
 
+// ====== GAME ENGINE ======
+
 import { Config } from './config.js';
 import { StorageManager } from './storage.js';
 
-// Pieces with SRS spawn positions
+/** 4x4 rotation states per piece (SRS-friendly).
+ * The shapes for J, L, S, Z, T are placed in the top-left 3×3 area of the 4×4 box,
+ * so existing T-Spin detection that checks a 3×3 box at (x,y) continues to work.
+ * O piece keeps identical 4 states (we do not rotate its mask), kicks = [[0,0]].
+ */
+export const SHAPES = {
+  I: [
+    [ [0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0] ],
+    [ [0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0] ],
+    [ [0,0,0,0],[0,0,0,0],[1,1,1,1],[0,0,0,0] ],
+    [ [0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0] ],
+  ],
+  O: [
+    [ [0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0] ],
+  ],
+  T: [
+    [ [0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,0,0],[0,1,1,0],[0,1,0,0],[0,0,0,0] ],
+    [ [0,0,0,0],[1,1,1,0],[0,1,0,0],[0,0,0,0] ],
+    [ [0,1,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0] ],
+  ],
+  S: [
+    [ [0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,0,0],[0,1,1,0],[0,0,1,0],[0,0,0,0] ],
+    [ [0,0,0,0],[0,1,1,0],[1,1,0,0],[0,0,0,0] ],
+    [ [1,0,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0] ],
+  ],
+  Z: [
+    [ [1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,0,1,0],[0,1,1,0],[0,1,0,0],[0,0,0,0] ],
+    [ [0,0,0,0],[1,1,0,0],[0,1,1,0],[0,0,0,0] ],
+    [ [0,1,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0] ],
+  ],
+  J: [
+    [ [1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,1,0],[0,1,0,0],[0,1,0,0],[0,0,0,0] ],
+    [ [0,0,0,0],[1,1,1,0],[0,0,1,0],[0,0,0,0] ],
+    [ [0,1,0,0],[0,1,0,0],[1,1,0,0],[0,0,0,0] ],
+  ],
+  L: [
+    [ [0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0] ],
+    [ [0,1,0,0],[0,1,0,0],[0,1,1,0],[0,0,0,0] ],
+    [ [0,0,0,0],[1,1,1,0],[1,0,0,0],[0,0,0,0] ],
+    [ [1,1,0,0],[0,1,0,0],[0,1,0,0],[0,0,0,0] ],
+  ],
+};
+
+/** Spawn positions (SRS-ish). Keep your original x/y choices. */
 export const PIECES = {
-  I: { shape: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], x: 3, y: -1 },
-  O: { shape: [[0,1,1,0],[0,1,1,0],[0,0,0,0]], x: 4, y: -1 },
-  T: { shape: [[0,1,0],[1,1,1],[0,0,0]], x: 3, y: 0 },
-  S: { shape: [[0,1,1],[1,1,0],[0,0,0]], x: 3, y: 0 },
-  Z: { shape: [[1,1,0],[0,1,1],[0,0,0]], x: 3, y: 0 },
-  J: { shape: [[1,0,0],[1,1,1],[0,0,0]], x: 3, y: 0 },
-  L: { shape: [[0,0,1],[1,1,1],[0,0,0]], x: 3, y: 0 }
+  I: { shape: SHAPES.I[0], x: 3, y: -1 },
+  O: { shape: SHAPES.O[0], x: 4, y: -1 },
+  T: { shape: SHAPES.T[0], x: 3, y: 0 },
+  S: { shape: SHAPES.S[0], x: 3, y: 0 },
+  Z: { shape: SHAPES.Z[0], x: 3, y: 0 },
+  J: { shape: SHAPES.J[0], x: 3, y: 0 },
+  L: { shape: SHAPES.L[0], x: 3, y: 0 },
 };
 
 // SRS wall kicks
 const WALL_KICKS = {
   normal: [
-    [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]], // 0->1
-    [[0,0],[1,0],[1,-1],[0,2],[1,2]],     // 1->0
-    [[0,0],[1,0],[1,-1],[0,2],[1,2]],     // 1->2
-    [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]], // 2->1
-    [[0,0],[1,0],[1,1],[0,-2],[1,-2]],    // 2->3
-    [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],  // 3->2
-    [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],  // 3->0
-    [[0,0],[1,0],[1,1],[0,-2],[1,-2]]     // 0->3
+    [[0,0],[-1,0],[-1,-1],[0, 2],[-1, 2]], // 0->1
+    [[0,0],[ 1,0],[ 1, 1],[0,-2],[ 1,-2]], // 1->0
+    [[0,0],[ 1,0],[ 1, 1],[0,-2],[ 1,-2]], // 1->2
+    [[0,0],[-1,0],[-1,-1],[0, 2],[-1, 2]], // 2->1
+    [[0,0],[ 1,0],[ 1,-1],[0, 2],[ 1, 2]], // 2->3
+    [[0,0],[-1,0],[-1, 1],[0,-2],[-1,-2]], // 3->2
+    [[0,0],[-1,0],[-1, 1],[0,-2],[-1,-2]], // 3->0
+    [[0,0],[ 1,0],[ 1,-1],[0, 2],[ 1, 2]]  // 0->3
   ],
+/* I piece */
   I: [
-    [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],   // 0->1
-    [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],   // 1->0
-    [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],   // 1->2
-    [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],   // 2->1
-    [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],   // 2->3
-    [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],   // 3->2
-    [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],   // 3->0
-    [[0,0],[-1,0],[2,0],[-1,2],[2,-1]]    // 0->3
+    [[0,0],[-2,0],[ 1,0],[-2, 1],[ 1,-2]], // 0->1
+    [[0,0],[ 2,0],[-1,0],[ 2,-1],[-1, 2]], // 1->0
+    [[0,0],[-1,0],[ 2,0],[-1,-2],[ 2, 1]], // 1->2
+    [[0,0],[ 1,0],[-2,0],[ 1, 2],[-2,-1]], // 2->1
+    [[0,0],[ 2,0],[-1,0],[ 2,-1],[-1, 2]], // 2->3
+    [[0,0],[-2,0],[ 1,0],[-2, 1],[ 1,-2]], // 3->2
+    [[0,0],[ 1,0],[-2,0],[ 1, 2],[-2,-1]], // 3->0
+    [[0,0],[-1,0],[ 2,0],[-1,-2],[ 2, 1]]  // 0->3
   ]
 };
+
+/** Small utility: deep copy of a 2D array */
+const cloneShape = (shape) => shape.map(row => [...row]);
 
 export class GameEngine {
   constructor() {
@@ -59,8 +115,26 @@ export class GameEngine {
     this.clearingLines = false;
     this.hardDropping = false;
     this.moveCount = 0;
+    this.lockResetCount = 0;
     this.canHold = true;
     this.manualDropping = false;
+    
+    // T-Spin & Combo tracking
+    this.lastMoveWasRotation = false;
+    this.lastKickIndex = -1;
+    this.combo = 0;
+    this.backToBack = false;
+    this.lastClearWasDifficult = false;
+    
+    // Statistics
+    this.stats = {
+      tSpins: 0,
+      miniTSpins: 0,
+      tetrises: 0,
+      perfectClears: 0,
+      maxCombo: 0,
+      backToBacks: 0
+    };
     
     // Timers
     this.dropTimer = null;
@@ -117,16 +191,16 @@ export class GameEngine {
       this.nextBag = this.generateBag();
     }
     const type = this.bag.shift();
-    const piece = PIECES[type];
+    const tpl = PIECES[type];
     return {
       type,
-      shape: piece.shape.map(row => [...row]),
-      x: piece.x,
-      y: piece.y,
+      shape: cloneShape(SHAPES[type][0]), // rotation state 0 of 4x4 set
+      x: tpl.x,
+      y: tpl.y,
       rotation: 0
     };
   }
-  
+
   // Board management
   initBoard() {
     this.board = Array(Config.BOARD.ROWS).fill().map(() => Array(Config.BOARD.COLS).fill(0));
@@ -144,67 +218,58 @@ export class GameEngine {
     );
   }
   
-  // Rotation
-  rotateMatrix(matrix) {
-    const n = matrix.length;
-    const rotated = Array(n).fill().map(() => Array(n).fill(0));
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        rotated[j][n-1-i] = matrix[i][j];
-      }
-    }
-    return rotated;
-  }
-  
+  // Rotation using precomputed 4x4 states + SRS kicks
   rotatePiece(direction = 1) {
     if (!this.canPerformAction()) return;
-    
-    const oldRot = this.currentPiece.rotation;
+
+    const piece = this.currentPiece;
+    const oldRot = piece.rotation;
     const newRot = (oldRot + direction + 4) % 4;
-    
-    // Create rotated piece
-    let rotated = {...this.currentPiece};
-    
-    // Apply rotation based on direction
-    if (direction === 1) {
-      rotated.shape = this.rotateMatrix(this.currentPiece.shape);
-    } else {
-      // Rotate counterclockwise (3 times clockwise)
-      rotated.shape = this.rotateMatrix(
-        this.rotateMatrix(this.rotateMatrix(this.currentPiece.shape))
-      );
-    }
-    
+
+    // Build rotated candidate with the target state
+    const rotated = { ...piece };
+    rotated.shape = cloneShape(SHAPES[piece.type][newRot]);
     rotated.rotation = newRot;
-    
-    // Get wall kicks
-    const kickData = this.currentPiece.type === 'I' ? WALL_KICKS.I : WALL_KICKS.normal;
+
+    // Choose kick table
+    const kickData =
+      piece.type === 'I' ? WALL_KICKS.I :
+      piece.type === 'O' ? WALL_KICKS.O :
+      WALL_KICKS.normal;
+
+    // Map old->new rotation to the correct kick index (same mapping as before)
     let kickIndex;
-    
     if (direction === 1) {
-      kickIndex = oldRot * 2;
+      kickIndex = oldRot * 2; // 0->1, 1->2, 2->3, 3->0 are even indices in our table
     } else {
-      kickIndex = ((oldRot + 3) % 4) * 2 + 1;
+      kickIndex = ((oldRot + 3) % 4) * 2 + 1; // 0->3, 3->2, 2->1, 1->0 are odd indices
     }
-    
+
     const kicks = kickData[kickIndex] || [[0,0]];
-    
-    // Try each kick
-    for (const [dx, dy] of kicks) {
-      rotated.x = this.currentPiece.x + dx;
-      rotated.y = this.currentPiece.y + dy;
-      if (this.isValidPosition(rotated)) {
+
+    // Try kicks in order
+    for (let i = 0; i < kicks.length; i++) {
+      const [dx, dy] = kicks[i];
+      rotated.x = piece.x + dx;
+      rotated.y = piece.y + dy;
+
+      if (this.isValidPosition(rotated, 0, 0)) {
         this.currentPiece = rotated;
+
+        // lock-reset bookkeeping (unchanged from your logic)
         this.moveCount++;
+        this.lastMoveWasRotation = true;
+        this.lastKickIndex = i;
         this.resetLockDelay();
+
         this.updateGhost();
-        
         this.emitStateUpdate();
         this.saveState();
         return;
       }
     }
   }
+
   
   // Movement
   movePiece(dx, dy) {
@@ -216,6 +281,7 @@ export class GameEngine {
       
       if (dx !== 0) {
         this.moveCount++;
+        this.lastMoveWasRotation = false;
         if (!this.isValidPosition(this.currentPiece, 0, 1)) {
           this.resetLockDelay();
         }
@@ -255,6 +321,7 @@ export class GameEngine {
     if (this.isValidPosition({...this.currentPiece, x: clampedX})) {
       this.currentPiece.x = clampedX;
       this.moveCount++;
+      this.lastMoveWasRotation = false;
       if (!this.isValidPosition(this.currentPiece, 0, 1)) {
         this.resetLockDelay();
       }
@@ -321,6 +388,8 @@ export class GameEngine {
     if (!this.canPerformAction() || !this.canHold) return;
     
     this.canHold = false;
+    this.lastMoveWasRotation = false;
+    this.lastKickIndex = -1;
     
     if (this.heldPiece) {
       // Swap with held piece
@@ -354,12 +423,17 @@ export class GameEngine {
     }
   }
   
-  // Lock delay
+  // Lock delay with proper infinity
   resetLockDelay() {
+    if (this.lockResetCount >= Config.MOVEMENT.MAX_LOCK_RESETS) {
+      return; // Don't reset if we've hit the limit
+    }
+    
     if (this.moveCount < Config.MOVEMENT.MAX_MOVES_BEFORE_LOCK && this.currentPiece) {
       if (this.lockTimer) {
         clearTimeout(this.lockTimer);
         this.lockTimer = null;
+        this.lockResetCount++;
       }
       this.lockTimer = setTimeout(() => {
         if (this.currentPiece && !this.isValidPosition(this.currentPiece, 0, 1)) {
@@ -367,6 +441,64 @@ export class GameEngine {
         }
       }, Config.TIMING.LOCK_DELAY);
     }
+  }
+  
+  // T-Spin detection
+  detectTSpin() {
+    if (this.currentPiece.type !== 'T' || !this.lastMoveWasRotation) {
+      return { isTSpin: false, isMini: false };
+    }
+    
+    const x = this.currentPiece.x;
+    const y = this.currentPiece.y;
+    
+    // Check the four corners of the T piece's 3x3 bounding box
+    const corners = [
+      [x, y],           // Top-left
+      [x + 2, y],       // Top-right
+      [x, y + 2],       // Bottom-left
+      [x + 2, y + 2]    // Bottom-right
+    ];
+    
+    // Count filled corners
+    let filledCorners = 0;
+    let frontCorners = 0;
+    
+    corners.forEach(([cx, cy], index) => {
+      const isFilled = cy < 0 || cy >= Config.BOARD.ROWS || 
+                      cx < 0 || cx >= Config.BOARD.COLS || 
+                      this.board[cy][cx];
+      
+      if (isFilled) {
+        filledCorners++;
+        // Front corners depend on rotation
+        if ((this.currentPiece.rotation === 0 && index >= 2) ||  // Down
+            (this.currentPiece.rotation === 1 && index % 2 === 1) ||  // Right
+            (this.currentPiece.rotation === 2 && index < 2) ||  // Up
+            (this.currentPiece.rotation === 3 && index % 2 === 0)) {  // Left
+          frontCorners++;
+        }
+      }
+    });
+    
+    // T-Spin if 3+ corners filled
+    const isTSpin = filledCorners >= 3;
+    
+    // Mini T-Spin if T-Spin with specific conditions
+    const isMini = isTSpin && (frontCorners < 2 || this.lastKickIndex === 4);
+    
+    return { isTSpin, isMini };
+  }
+  
+  // Check for perfect clear
+  isPerfectClear() {
+    // Check if the entire board is empty
+    for (let r = 0; r < Config.BOARD.ROWS; r++) {
+      if (this.board[r].some(cell => cell !== 0)) {
+        return false;
+      }
+    }
+    return true;
   }
   
   // Lock piece
@@ -377,6 +509,9 @@ export class GameEngine {
       clearTimeout(this.lockTimer);
       this.lockTimer = null;
     }
+    
+    // Detect T-Spin before adding to board
+    const tSpinResult = this.detectTSpin();
     
     const {shape, x, y, type} = this.currentPiece;
     
@@ -392,13 +527,17 @@ export class GameEngine {
     // Clear current piece before checking lines
     this.currentPiece = null;
     this.canHold = true;
+    this.moveCount = 0;
+    this.lockResetCount = 0;
+    this.lastMoveWasRotation = false;
+    this.lastKickIndex = -1;
     
-    // Check and clear lines
-    this.clearLines();
+    // Check and clear lines with T-Spin info
+    this.clearLines(tSpinResult);
   }
   
-  // Clear lines
-  clearLines() {
+  // Clear lines with T-Spin and combo tracking
+  clearLines(tSpinResult = { isTSpin: false, isMini: false }) {
     const linesToClear = [];
     
     // Find completed lines
@@ -409,23 +548,76 @@ export class GameEngine {
     }
     
     if (linesToClear.length === 0) {
-      this.spawnNextPiece();
+      this.combo = 0; // Reset combo
+      // Apply ARE delay before spawning next piece
+      setTimeout(() => this.spawnNextPiece(), Config.TIMING.ARE_DELAY);
       return;
     }
     
     this.clearingLines = true;
     
+    // Calculate score based on line clear type
+    const numLines = linesToClear.length;
+    let baseScore = 0;
+    let isDifficultClear = false;
+    
+    if (tSpinResult.isTSpin) {
+      if (tSpinResult.isMini) {
+        baseScore = Config.SCORING.T_SPIN.MINI[numLines] || 0;
+        this.stats.miniTSpins++;
+      } else {
+        baseScore = Config.SCORING.T_SPIN.REGULAR[numLines] || 0;
+        this.stats.tSpins++;
+        isDifficultClear = true;
+      }
+      this.emit(Config.EVENTS.T_SPIN, { mini: tSpinResult.isMini, lines: numLines });
+    } else {
+      baseScore = Config.SCORING.LINES[numLines] || 0;
+      if (numLines === 4) {
+        isDifficultClear = true;
+        this.stats.tetrises++;
+      }
+    }
+    
+    // Apply Back-to-Back bonus
+    if (isDifficultClear) {
+      if (this.lastClearWasDifficult) {
+        baseScore = Math.floor(baseScore * Config.SCORING.BACK_TO_BACK_MULTIPLIER);
+        this.backToBack = true;
+        this.stats.backToBacks++;
+        this.emit(Config.EVENTS.BACK_TO_BACK, { score: baseScore });
+      }
+      this.lastClearWasDifficult = true;
+    } else if (numLines > 0) {
+      this.lastClearWasDifficult = false;
+      this.backToBack = false;
+    }
+    
+    // Apply combo bonus
+    if (this.combo > 0) {
+      baseScore += Config.SCORING.COMBO_MULTIPLIER * this.combo * this.level;
+      this.emit(Config.EVENTS.COMBO, { combo: this.combo, bonus: Config.SCORING.COMBO_MULTIPLIER * this.combo * this.level });
+    }
+    this.combo++;
+    this.stats.maxCombo = Math.max(this.stats.maxCombo, this.combo);
+    
+    // Apply level multiplier
+    this.score += baseScore * this.level;
+    
     // Emit line clear event with callback
     this.emit(Config.EVENTS.LINES_CLEARED, {
       lines: linesToClear,
+      tSpin: tSpinResult,
+      combo: this.combo,
+      backToBack: this.backToBack,
       callback: () => {
-        this.updateBoardAfterClear(linesToClear);
+        this.updateBoardAfterClear(linesToClear, numLines);
       }
     });
   }
   
   // Update board after line clear
-  updateBoardAfterClear(linesToClear) {
+  updateBoardAfterClear(linesToClear, numLines) {
     // Remove cleared lines and add empty lines at top
     linesToClear.sort((a, b) => b - a).forEach(row => {
       this.board.splice(row, 1);
@@ -435,9 +627,16 @@ export class GameEngine {
       this.board.unshift(Array(Config.BOARD.COLS).fill(0));
     }
     
-    // Update score
-    this.score += Config.SCORING.LINES[linesToClear.length] * this.level;
-    this.lines += linesToClear.length;
+    // Check for perfect clear
+    if (this.isPerfectClear()) {
+      const perfectClearBonus = Config.SCORING.PERFECT_CLEAR_BONUS[numLines] || 0;
+      this.score += perfectClearBonus * this.level;
+      this.stats.perfectClears++;
+      this.emit(Config.EVENTS.PERFECT_CLEAR, { bonus: perfectClearBonus * this.level });
+    }
+    
+    // Update lines count
+    this.lines += numLines;
     
     // Check level up
     if (this.lines >= this.level * Config.SCORING.LINES_PER_LEVEL) {
@@ -448,7 +647,11 @@ export class GameEngine {
     this.emitStateUpdate();
     this.clearingLines = false;
     this.saveState();
-    this.spawnNextPiece();
+    
+    // Apply line clear delay then ARE delay
+    setTimeout(() => {
+      setTimeout(() => this.spawnNextPiece(), Config.TIMING.ARE_DELAY);
+    }, Config.TIMING.LINE_CLEAR_DELAY);
   }
   
   // Spawn next piece
@@ -462,6 +665,7 @@ export class GameEngine {
     }
     
     this.moveCount = 0;
+    this.lockResetCount = 0;
     this.currentPiece = this.getNextPiece();
     this.updateGhost();
     
@@ -538,10 +742,28 @@ export class GameEngine {
     this.clearingLines = false;
     this.hardDropping = false;
     this.moveCount = 0;
+    this.lockResetCount = 0;
     this.canHold = true;
     this.heldPiece = null;
     this.bag = this.generateBag();
     this.nextBag = this.generateBag();
+    
+    // Reset T-Spin & combo tracking
+    this.lastMoveWasRotation = false;
+    this.lastKickIndex = -1;
+    this.combo = 0;
+    this.backToBack = false;
+    this.lastClearWasDifficult = false;
+    
+    // Reset statistics
+    this.stats = {
+      tSpins: 0,
+      miniTSpins: 0,
+      tetrises: 0,
+      perfectClears: 0,
+      maxCombo: 0,
+      backToBacks: 0
+    };
     
     // Initialize game
     this.initBoard();
@@ -577,7 +799,7 @@ export class GameEngine {
       this.storage.saveHighScore(this.highScore);
     }
     
-    this.emit(Config.EVENTS.GAME_OVER);
+    this.emit(Config.EVENTS.GAME_OVER, { stats: this.stats });
   }
   
   // State management
@@ -590,7 +812,26 @@ export class GameEngine {
     if (!savedState) return false;
     
     try {
+      // Restore basic state
       Object.assign(this, savedState);
+      
+      // Initialize missing properties for backward compatibility
+      if (this.combo === undefined) this.combo = 0;
+      if (this.backToBack === undefined) this.backToBack = false;
+      if (this.lastClearWasDifficult === undefined) this.lastClearWasDifficult = false;
+      if (this.lastMoveWasRotation === undefined) this.lastMoveWasRotation = false;
+      if (this.lastKickIndex === undefined) this.lastKickIndex = -1;
+      if (this.lockResetCount === undefined) this.lockResetCount = 0;
+      if (!this.stats) {
+        this.stats = {
+          tSpins: 0,
+          miniTSpins: 0,
+          tetrises: 0,
+          perfectClears: 0,
+          maxCombo: 0,
+          backToBacks: 0
+        };
+      }
       
       // Restore timers if not paused
       if (!this.paused) {
@@ -626,7 +867,10 @@ export class GameEngine {
       paused: this.paused,
       bag: this.bag,
       nextBag: this.nextBag,
-      canHold: this.canHold
+      canHold: this.canHold,
+      combo: this.combo,
+      backToBack: this.backToBack,
+      stats: this.stats
     };
   }
 }
